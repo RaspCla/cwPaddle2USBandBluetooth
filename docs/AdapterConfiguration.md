@@ -11,4 +11,5 @@ As an first step its a good idea to connect the adapter to your home network. Th
 <br clear="left"/>
 <br>
 <br>
+
 [← back to table of contents](README.md)
