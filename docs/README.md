@@ -1,10 +1,8 @@
-# Hardware-Dokumentation
+# cwPaddle2USBandBluetooth adapter documentation
 
-## Some pictures
-![Adapter mounted in case](Morse_Paddle2USB&Bluetooth_WithHousing.jpeg)
+## content
 
-![Adapter top side](Morse_Paddle2USB&Bluetooth_OpenHousing.jpeg)
-
-![Adapter bottom side](Morse_Paddle2USB&Bluetooth_OpenHousing.jpeg)
-
-![Adapter bottom side with marking](Morse_Paddle2USB&Bluetooth_OpenHousing_marked.jpg)
+1. [Hardware](HardwareDoc.md)
+2. [Adapter Configuration](verdrahtung.md)
+   
+[← Back to Main page](../README.md)
