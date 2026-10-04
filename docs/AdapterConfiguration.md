@@ -9,4 +9,8 @@ Once you are connected to the device you can reach the configuration page via We
 As an first step its a good idea to connect the adapter to your home network. Therefore scroll down, click to "Wlan scannen", Go to "Netze:" and select you home network. Finally enter your network password and click "WLAN speichern & neu starten"
 
 <br clear="left"/>
-[← back to table of contents](./README.md)
+
+
+
+[← back to table of contents](README.md)
+[← Back to Main page](../README.md)
