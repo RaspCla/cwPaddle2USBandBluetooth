@@ -1,5 +1,6 @@
 /*
 Required Notice: Copyright (c) 2026 RaspCla (https://github.com/RaspCla)
+Required Notice: Project: cwPaddle2USBandBluetooth (https://github.com/RaspCla/cwPaddle2USBandBluetooth)
 
 SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 Lizenz: PolyForm Noncommercial License 1.0.0
