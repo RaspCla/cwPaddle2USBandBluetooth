@@ -1,6 +1,6 @@
 <img src="ConfigurationPage.jpg" align="left">
 
-#Adapter Configuration
+# Adapter Configuration
 
 There is a possibility to configure this adpater via an web frontend (wifi)
 If the adapter is freshly flashed you have to find it inside your wireless environment.
