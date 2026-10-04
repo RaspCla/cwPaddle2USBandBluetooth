@@ -1,4 +1,16 @@
 /*
+Required Notice: Copyright (c) 2026 RaspCla (https://github.com/RaspCla)
+
+SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+Lizenz: PolyForm Noncommercial License 1.0.0
+  https://polyformproject.org/licenses/noncommercial/1.0.0
+Nicht-kommerzielle Nutzung und Veraenderung erlaubt. Kommerzielle Nutzung nur mit
+Genehmigung des Autors.
+
+Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erweitert.
+*/
+
+/*
 * ==============================================================================
 * PROJEKT: Drahtloses Morse-Paddle zu USB-HID & Bluetooth Interface (S3)
 * HARDWARE: Heemol ESP32-S3 Mini Entwicklungsboard Typ-C (von Amazon)
