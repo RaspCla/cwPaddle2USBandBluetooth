@@ -8,3 +8,7 @@
 ![Adapter bottom side](Morse_Paddle2USB&Bluetooth_OpenHousing.jpeg)
 
 ![Adapter bottom side with marking](Morse_Paddle2USB&Bluetooth_OpenHousing_marked.jpg)
+
+<br><br><br>
+
+[← back to table of contents](README.md)
