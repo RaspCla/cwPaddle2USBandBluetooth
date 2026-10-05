@@ -4,7 +4,7 @@ This project (adapter) converts signals of a paddle to an USB or Bluetooth Keybo
 Therefore this adapter can be used ideally to connect a morse paddle e.g. to Morse-it (iPhone) or morsecode.world (via PC)
 Prerequisite are paddles which offers a switch for 'dit' and a second switch for 'dah'. Each switch will pull down an ESP32-S3 IO Pin to ground.
 
-In combination with my Windows app '[PaddleBridge]([url](https://github.com/RaspCla/PaddleBridge))', this adapter can also be used, for cw operation with Simon Brown's SDR-Console.
+In combination with my Windows app '[PaddleBridge]([https://github.com/RaspCla/PaddleBridge])', this adapter can also be used, for cw operation with Simon Brown's SDR-Console.
 
 More details you can find within the header of the ino-file and docs folder. 
 
