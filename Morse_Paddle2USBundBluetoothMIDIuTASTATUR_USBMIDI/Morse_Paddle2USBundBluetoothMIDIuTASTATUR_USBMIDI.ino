@@ -41,6 +41,8 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 * Bietet ein Web-Interface auf Core 0 zur Konfiguration aller Parameter.
 * Web Adresse: 192.168.40.1, SID: Morse-S3-Config
 * Geht nach Inaktivität in den Tiefschlaf. Wacht per Paddledruck auf.
+* Sleep-Timeout und Web-Timeout (Webinterface): Wert "0" deaktiviert den jeweiligen
+*   Timeout vollstaendig (kein Tiefschlaf bzw. WLAN bleibt dauerhaft an).
 * 
 * ==============================================================================
 * VERKABELUNG LAUT SCHALTPLANN
@@ -63,7 +65,8 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 * - JTAG Adapter: "Dissabled"
 * - Arduino Run On: "Core 1"
 * - USB Firmware MC On Boot: "Disabled"
-* - Partition Scheme: "Default 4MB with spiffs (1.2MB APP/1.5MB SPIFFS)"
+* - Partition Scheme: "Huge App (3MB no OTA/1MBSPIFFS)"  dann kann man auch Core debug Level zum Debuggen ändern
+*   oder "Default 4MB with spiffs (1.2MB APP/1.5MB SPIFFS)"
 * - PSRAM: "Disabled"
 * - Upload Mode: "USB-OTG CDC (TinyUSB)" nicht "UART0 / Hardware CDC"!
 * - Upload Speed: "921600" oder niedriger (Max. Speed begrenzen für stabilen Flash!)
@@ -111,6 +114,11 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *   Zusaetzlich waehlbar: MIDI-Lautstaerke (CC7 = Channel Volume, Default 127 = Maximum).
 *   Sie wird pro Verbindung einmal mit dem ersten Ton (im selben BLE-Paket) gesendet
 *   und nach dem Speichern neuer Werte erneut. Nicht jede App reagiert auf CC7.
+*   Verlangt Pairing/Bonding (wie von der BLE-MIDI-Spezifikation vorgesehen). Dadurch
+*   koennen aktuelle Betriebssysteme (z.B. iOS 16+/macOS 13+) das Geraet nach dem
+*   ersten Koppeln automatisch wiedererkennen und verbinden, sobald es eingeschaltet
+*   ist - ob eine konkrete App (z.B. Morse-It) diesen automatischen Verbindungsaufbau
+*   tatsaechlich nutzt, liegt an der App selbst und kann hier nicht erzwungen werden.
 * - Modus "BLE-Tastatur": meldet sich als Bluetooth-HID-Tastatur an und sendet
 *   pro Paddle die gewaehlte Taste (Default: Strg links / Strg rechts)
 * - USB-Tastatur: eigene Tastenwahl, unabhaengig vom Bluetooth-Modus
@@ -703,8 +711,8 @@ void handleRoot() {
   String checkStr = swapPaddles ? "checked" : "";
   html += "<div class='row'><input type='checkbox' name='swap' style='width:auto;margin-right:10px;' " + checkStr + "><label>Paddles tauschen (L/R)</label></div>";
 
-  html += "<div>Sleep-Timeout (Min):<br><input type='number' name='timeout' value='" + String(sleepTimeoutMs / 60000) + "'></div>";
-  html += "<div>Web-Timeout (Min):<br><input type='number' name='web_timeout' value='" + String(webTimeoutMs / 60000) + "'></div>";
+  html += "<div>Sleep-Timeout (Min, 0 = nie):<br><input type='number' name='timeout' min='0' value='" + String(sleepTimeoutMs / 60000) + "'></div>";
+  html += "<div>Web-Timeout (Min, 0 = nie):<br><input type='number' name='web_timeout' min='0' value='" + String(webTimeoutMs / 60000) + "'></div>";
   html += "<div>Farbe Takt:<br><input type='color' name='c_heart' value='" + getHexStr(colorHeartbeat) + "'></div>";
   html += "<div>Farbe Punkt:<br><input type='color' name='c_dot' value='" + getHexStr(colorDot) + "'></div>";
   html += "<div>Farbe Strich:<br><input type='color' name='c_dash' value='" + getHexStr(colorDash) + "'></div>";
@@ -737,7 +745,12 @@ void handleRoot() {
     "<h3 style='color:#ffdd57;margin-top:0;'>USB-MIDI (Kabel)</h3>"
     "<p class='hint'>Sendet zus&auml;tzlich zu den USB-Tastaturbefehlen echte USB-MIDI-Noten &ndash; "
     "unabh&auml;ngig von Bluetooth und von den BLE-MIDI-Noten. Ein-/Ausschalten braucht einen Neustart, "
-    "Notenaenderungen wirken sofort.</p>");
+    "Notenaenderungen wirken sofort.</p>"
+    "<p class='hint' style='color:#ffdd57;'><b>Achtung:</b> Sind USB-Tastatur UND USB-MIDI gleichzeitig "
+    "aktiviert, kann es nach einem automatischen Einschlafen (Sleep-Timeout) und Aufwachen vorkommen, dass "
+    "sich die USB-Treiber am PC aufh&auml;ngen &ndash; Aus-/Einstecken hilft dann nicht mehr, nur ein "
+    "PC-Neustart. Setze in diesem Fall den Sleep-Timeout oben auf 0 (nie). Das WLAN/Webinterface ist davon "
+    "nicht betroffen.</p>");
   {
     String midiChk = usbMidiEnabled ? "checked" : "";
     server.sendContent("<div class='row'><input type='checkbox' name='usbmidi_en' style='width:auto;margin-right:10px;' " + midiChk + "><label>USB-MIDI aktivieren</label></div>");
@@ -760,7 +773,9 @@ void handleRoot() {
     "<p class='hint'><b>Hinweis:</b> BLE-MIDI und BLE-Tastatur funktionieren nicht gleichzeitig. Es ist immer nur ein "
     "Ger&auml;t verbunden &ndash; wer sich zuerst verbindet, belegt das Ger&auml;t. Im MIDI-Modus nutzt das Ger&auml;t "
     "eine eigene Bluetooth-Adresse, damit sich ein fr&uuml;her als Tastatur gekoppeltes Ger&auml;t nicht "
-    "versehentlich verbindet.</p>");
+    "versehentlich verbindet. Beide Modi verlangen Pairing (Kopplung) &ndash; danach verbinden sich unterst&uuml;tzte "
+    "Ger&auml;te (z.B. iOS 16+/macOS 13+) beim Einschalten automatisch wieder. Ob die jeweilige App das nutzt, "
+    "h&auml;ngt von der App ab.</p>");
 
   String bt = "<div class='row'><label style='margin-right:15px;'><input type='radio' name='bt_mode' value='0' onchange='upd()' style='width:auto;' ";
   bt += (btMode == 0) ? "checked" : "";
@@ -975,7 +990,7 @@ rgbLed.setPixelColor(0, colorHeartbeat); rgbLed.show(); delay(30);
 rgbLed.setPixelColor(0, 0); rgbLed.show();
 lastHeartbeatTime = millis();
 }
-if ((millis() - lastActivityTime) > sleepTimeoutMs) {
+if (sleepTimeoutMs > 0 && (millis() - lastActivityTime) > sleepTimeoutMs) {
 goToDeepSleep();
 }
 delay(debounceTime);
@@ -1051,13 +1066,28 @@ if (btMode == 1) {
   BLEDevice::startAdvertising();
   hid->setBatteryLevel(100);
 } else {
-  // ---- Bestehend: BLE-MIDI ----
+  // ---- Bestehend: BLE-MIDI, jetzt mit Pairing/Bonding (siehe BLE-MIDI Spezifikation) ----
   useOwnBluetoothAddressForMidi();   // eigene Bluetooth-Adresse nur in diesem Modus
   BLEDevice::init("Morse-Paddle-MIDI");
   BLEServer* pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
+
+  // Die offizielle BLE-MIDI-Spezifikation verlangt Pairing/Verschluesselung fuer die
+  // MIDI I/O Characteristic. "Secure Connections" + vollstaendiger (symmetrischer)
+  // Schluesselaustausch, wie von Apples eigenen BLE-Zubehoer-Vorgaben fuer BLE-MIDI
+  // empfohlen - robuster als die einfache Legacy-Kopplung aus dem BLE-Tastatur-Modus.
+  BLESecurity* pSecurity = new BLESecurity();
+  pSecurity->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_BOND);
+  pSecurity->setCapability(ESP_IO_CAP_NONE);
+  pSecurity->setKeySize(16);
+  pSecurity->setInitEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
+  pSecurity->setRespEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
+
   BLEService* pService = pServer->createService(BLEUUID(MIDI_SERVICE_UUID));
   pMidiCharacteristic = pService->createCharacteristic(BLEUUID(MIDI_CHARACTERISTIC_UUID), BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_WRITE_NR);
+  // Erzwingt, dass der Zugriff auf die Characteristic verschluesselt (= gepaart) sein muss -
+  // erst dadurch stoesst das Betriebssystem des Gegenueruts das Pairing/Bonding tatsaechlich an.
+  pMidiCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
   pService->start();
   pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(pService->getUUID());
@@ -1101,7 +1131,7 @@ xTaskCreatePinnedToCore(MorseCodeLoop, "MorseTask", 4096, NULL, 3, &MorseTask, 1
 void loop() {
 if (wifiActive) {
 server.handleClient();
-if ((millis() - lastWebActivityTime) > webTimeoutMs && (millis() - lastActivityTime) > webTimeoutMs) {
+if (webTimeoutMs > 0 && (millis() - lastWebActivityTime) > webTimeoutMs && (millis() - lastActivityTime) > webTimeoutMs) {
 WiFi.disconnect(true);
 WiFi.mode(WIFI_OFF);
 wifiActive = false;
