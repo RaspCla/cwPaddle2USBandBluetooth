@@ -1,4 +1,4 @@
-<img src="ConfigurationPage_2.jpg" align="left">
+<img src="ConfigurationPage.jpg" align="left">
 
 # Adapter Configuration
 
