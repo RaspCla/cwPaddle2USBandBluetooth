@@ -74,19 +74,23 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *
 *  BOARD-PAKET: "esp32" by Espressif Systems  (Boardverwalter, Min. Arduino-ESP32 3.x /
 *    ESP-IDF 5.1 fuer BLE-Adresse im MIDI-Modus).
-*    Je nach gewuenschter Funktion braucht es einen neueren Core:
-*     - USB-Audio-Mikrofon:  Core mit USBAudioCard (ab Arduino-ESP32 3.3.12 / 4.0.0-alpha).
-*       Ohne diese Klasse uebersetzt der Sketch trotzdem, der Bereich meldet
-*       "nicht vorhanden".
-*     - Statusleitungen DCD/DSR/Break ("PTT via Pin"):  Core mit USBCDC::notifyState()
-*       (PR #13037, Espressif-Issue #13091). Zusaetzlich muessen die vorkompilierten
-*       Bibliotheken (esp32-arduino-libs) mit CFG_TUD_CDC_NOTIFY=1 gebaut sein; bei
-*       Stand der letzten Tests war das NICHT der Fall -> die Funktion ist dann
-*       im Webinterface "gesperrt" (Statuszeile zeigt "CFG_TUD_CDC_NOTIFY=0").
+*    USB-Audio-Mikrofon UND Statusleitungen (DCD/DSR/Break, "PTT via Pin") benoetigen den
+*    Espressif-Core  3.3.13  oder neuer (Release angekuendigt, Stand 11/2026). Der Sketch
+*    nutzt dafuer nur die offiziellen Schnittstellen des Cores:
+*     - USB-Audio-Mikrofon:  Klasse USBAudioCard samt korrigiertem UAC1-Descriptor (PR #13095).
+*       Ohne diese Klasse uebersetzt der Sketch trotzdem, der Bereich meldet "nicht vorhanden".
+*     - Statusleitungen:  USBCDC::notifyState() mit echtem Notification-Endpoint
+*       (tud_cdc_0_use_notify(), der Sketch ueberschreibt die schwache Funktion des Cores) und
+*       USBCDC::notifyStateIgnoreDtr() fuer "DTR ignorieren" (PR #13113, Issue #13102).
+*       Zusaetzlich muessen die vorkompilierten Bibliotheken CFG_TUD_CDC_NOTIFY=1 enthalten
+*       (bei 3.3.12 mit esp32-arduino-libs ...-56b130f5-v4 der Fall). Der Endpoint wird nur
+*       angelegt, wenn mindestens eine Statusleitung zugewiesen ist (kostet einen der vier
+*       nutzbaren IN-Endpoints des ESP32-S3).
 *       Die CAT-Textbefehle ("PTT via Serial Commands") funktionieren unabhaengig davon.
+*    Vor 3.3.13 ist ein Master-Stand von Arduino-ESP32 mit den beiden PRs noetig.
 *
-*  Zuletzt getestet mit:  Arduino-ESP32 Master aus Git (4.0.0-alpha1, IDF 5.5, Libs
-*    "esp32-arduino-libs-idf-release_v5.5-b774170f-v3"), Stand 11/2026.
+*  Zuletzt getestet mit:  Arduino-ESP32 3.3.12 (release/v3.3.x) plus PR #13113, Libs
+*    "esp32-arduino-libs-idf-release_v5.5-56b130f5-v4", Stand 11/2026.
 *
 *  BIBLIOTHEKEN
 *   - Adafruit NeoPixel  (Bibliotheksverwalter; aktuell 1.15.5, Stand 11/2026)
@@ -95,11 +99,13 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *     BLE (BLEDevice, BLEServer, BLEHIDDevice, BLESecurity ...), WiFi, WebServer,
 *     ESPmDNS, Preferences (NVS), esp_sleep, esp_timer.
 *
-*  USB-AUDIO-HEADER (nur bei Core-Master / 4.0.0-alpha1):
-*   Die Datei  USBAudioCardDescriptors.h  (mit IAD, Interface Association Descriptor)
-*   muss im Core ersetzt werden, sonst meldet Windows das Mikrofon nicht oder doppelt:
+*  USB-AUDIO-HEADER (nur bei Core-Staenden vor 3.3.13 / vor dem 10.11.2026):
+*   Aeltere Cores melden das USB-Mikrofon unter Windows doppelt ("TinyUSB UAC1", Code 10), weil
+*   in den UAC1-Descriptoren der IAD (Interface Association Descriptor) fehlt (Korrektur: PR #13095).
+*   Bei aelteren Staenden die Datei  USBAudioCardDescriptors.h  mit dem Skript  patch_usbaudio_iad.py
+*   (siehe README_USB_Audio_Patch.md) anpassen:
 *     <Sketchbook>\hardware\espressif\esp32\libraries\USB\src\USBAudioCardDescriptors.h
-*   Nach dem Ersetzen den IDE-Build-Cache loeschen (siehe Abschnitt 5).
+*   Danach den IDE-Build-Cache loeschen (siehe Abschnitt 5).
 *
 * ------------------------------------------------------------------------------
 *  4. ARDUINO-IDE-EINSTELLUNGEN   (Werkzeuge-Menue)
@@ -143,7 +149,7 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *  - Meldung "unlinkat ... .map: Der Prozess kann nicht auf die Datei zugreifen"
 *    beim Kompilieren ist ein kurzer Dateizugriffskonflikt (z.B. Virenscanner):
 *    einfach noch einmal kompilieren.
-*  - Audio-Mikrofon doppelt/fehlt in Windows: Header-Patch (Abschnitt 3) pruefen,
+*  - Audio-Mikrofon doppelt/fehlt in Windows: bei Core vor dem 10.11.2026 Header-Patch (Abschnitt 3) pruefen,
 *    Build-Cache loeschen, ggf. altes Geraet im Geraete-Manager entfernen.
 *  - Diagnose: Im Webinterface zeigt der Bereich "USB-Serial & USB-Audio" den
 *    Zustand des Cores (Statusleitungen moeglich?), ob der COM-Port am PC geoeffnet ist,
@@ -161,9 +167,10 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *     Adresse  http://192.168.4.1
 *   - Mit Heimnetz (WLAN im Webinterface waehlen/eingeben): Adresse morse-s3.local
 *     oder die vom Router vergebene IP (steht im seriellen Monitor).
-*   - Das WLAN schaltet sich nach dem "Web-Timeout" ab (Standard 3 min, 0 = nie);
-*     der Tiefschlaf folgt nach dem "Sleep-Timeout" (Standard 20 min, 0 = nie).
-*     Aufwecken per Paddle-Druck.
+*   - Das WLAN schaltet sich nach dem "Web-Timeout" ab (Standard 0 = nie);
+*     der Tiefschlaf folgt nach dem "Sleep-Timeout" (Standard 0 = nie). Beides in Minuten
+*     einstellbar; Aufwecken aus dem Tiefschlaf per Paddle-Druck. (Die Standardwerte gelten
+*     nur fuer neue/geloeschte Geraete; ein bereits gespeicherter Wert bleibt erhalten.)
 *  Speichern
 *   - Einstellungen OHNE Neustart wirken SOFORT, sobald sie geaendert werden (Zahlen-/
 *     Textfelder nach Verlassen des Feldes), sind aber erst nach "Einstellungen
@@ -171,6 +178,40 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *   - Neustart nur bei: WLAN-Zugang, USB-Tastatur/-MIDI/-Audio ein/aus, Bluetooth-Modus.
 *     Diese Werte werden erst beim Speichern uebernommen.
 *   - Die Sprache der Oberflaeche (Deutsch/English) wird sofort umgeschaltet.
+*  Einstellungen sichern / laden
+*   - Ganz unten auf der Seite (Karte "Einstellungen sichern / laden"): "Einstellungen als
+*     Datei speichern" legt den aktuellen Stand der Seite (auch noch nicht gespeicherte
+*     Aenderungen) als lesbare Textdatei "morse-s3-settings.txt" ab (Zeilen "name = wert",
+*     Kommentarzeilen mit #, Checkboxen 1 = an / 0 = aus, Zeiten wie in der Oberflaeche).
+*   - "Einstellungen aus Datei laden" liest eine solche Datei und uebernimmt die Werte NUR in
+*     die Seite (sie wirken wie von Hand eingegeben sofort, der Speichern-Knopf blinkt).
+*     Dauerhaft gespeichert wird erst mit "Einstellungen speichern". Fehlende Eintraege
+*     aendern nichts, unbekannte werden ignoriert; die Datei darf von Hand bearbeitet werden.
+*   - Beide Knoepfe oeffnen zuerst ein kleines Fenster, dann die Dateiauswahl des Browsers.
+*     Beim Speichern steht im Fenster ein Feld "Dateiname" (Vorgabe: morse-s3-settings_
+*     Datum_Uhrzeit.txt, damit nichts ueberschrieben wird; unzulaessige Zeichen werden
+*     entfernt, fehlt die Endung, wird .txt angehaengt).
+*     Ausserdem steht dort der Haken "WLAN-Zugangsdaten mit sichern/laden" (Standard: aus,
+*     gilt fuer diesen einen Vorgang). Ist er gesetzt, ist auch das "Datei-Passwort" einzugeben:
+*     WLAN (Heimnetz-Name und Passwort) steht dann verschluesselt in der Datei (AES-256,
+*     Schluessel aus dem Datei-Passwort, das beim Sichern und beim Laden eingegeben werden
+*     muss). Das schuetzt vor zufaelligem Mitlesen; ein ordentliches Datei-Passwort waehlen.
+*   - Speicherort: Den Ordner bestimmt der Browser (nicht das Geraet). Es gibt zwei Wege:
+*     1. Chrome / Edge mit echter Dateiauswahl: Speichern UND Laden zeigen dann die normale
+*       Windows-Dateiauswahl und merken sich EINEN gemeinsamen letzten Ordner. Das geht aber
+*       nur auf einer "sicheren" Seite. Die Adresse http://192.168.x.x (oder http://morse.local)
+*       zaehlt als unsicher, dann nutzt die Seite Weg 2. Einmalig freischalten: in Chrome/Edge
+*       chrome://flags/#unsafely-treat-insecure-origin-as-secure (bei Edge edge://flags/...)
+*       oeffnen, die Adresse der Seite eintragen (z.B. http://192.168.4.1), auf "Enabled" stellen
+*       und den Browser neu starten.
+*     2. Normaler Download (immer, wenn Weg 1 nicht verfuegbar ist): Die Datei landet ohne
+*       Rueckfrage im Download-Ordner des Browsers, den Namen bestimmt das Feld im Fenster.
+*       Firefox kennt die Funktion fuer Weg 1 nicht (Stand der Recherche am 13.11.2026,
+*       kein Test auf allen Versionen) und nutzt immer Weg 2. Die Browser-Einstellung
+*       "Vor dem Download nachfragen / Immer nachfragen, wo Dateien gespeichert werden" gilt
+*       fuer ALLE Downloads und ist deshalb meist keine gute Loesung; besser die Datei
+*       anschliessend aus dem Download-Ordner verschieben. Beim Laden oeffnet der Browser
+*       seine Dateiauswahl (in Firefox nach eigener Beobachtung immer mit Rueckfrage).
 *
 * ------------------------------------------------------------------------------
 *  7. BETRIEBSARTEN IM DETAIL
@@ -208,21 +249,28 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *      USB-CDC technisch nicht moeglich. Der PC-Software (Remote CW Keyer, SDR Console ...)
 *      muss DSR bzw. DCD als Eingang eingestellt werden. Voraussetzung: Core + Libs
 *      siehe Abschnitt 3; ausserdem sendet der Core nur bei gesetztem DTR (COM-Port am
-*      PC geoeffnet) - ohne DTR kommen keine Meldungen an.
+*      PC geoeffnet) - ohne DTR kommen keine Meldungen an, ausser "DTR ignorieren" ist aktiv.
 *   b) CAT-Textbefehle ("PTT via Serial Commands"): Beim Senden-Beginn/-Ende werden
 *      frei einstellbare Texte (Standard "TX;" / "RX;") ueber den COM-Port gesendet;
 *      leer = nichts senden. Optional auch ohne gesetztes DTR (Standard an, z.B. SDR Console).
-*   - Lead time (Vorlauf): Ton und Taste folgen erst so viel spaeter als PTT
-*     (Standard 150 ms). Hold time: PTT bleibt so lange nach dem letzten Zeichen aktiv
-*     (Standard 300 ms). Beides gilt fuer beide PTT-Arten.
+*      Die Option "DTR ignorieren" gilt auch fuer die Statusleitungen (USBCDC::notifyStateIgnoreDtr):
+*      Ist sie aktiv, sind die Pins immer verfuegbar, auch ohne gesetztes DTR. Programme wie die
+*      SDR Console (PTT-Eingang nur CTS oder DSR) setzen DTR nicht. Getestet mit HTerm und
+*      SDR Console: ohne die Option nur bei gesetztem DTR, mit der Option immer.
+*   - Lead time (Vorlauf): PTT kommt sofort; Mikrofon-Ton und Statusleitung "Taste" folgen
+*     erst nach der Lead time (Standard 150 ms; der Piezo folgt dem Keyer sofort). Hold time:
+*     nach dem Loslassen bleibt PTT noch Hold time + Lead time aktiv
+*     (Hold time Standard 300 ms). Beides gilt fuer beide PTT-Arten.
 *
 *  KEYER
 *   - Modus aus / Iambic A / Iambic B, Tempo 5-60 WpM (Standard 20), optional Farnsworth.
 *   - Steuert USB-Mikrofon-Ton, Piezo und Statusleitung "Taste".
 *
 *  USB-AUDIO (Mikrofon)
-*   - Nur Aufnahme, mono, 48 kHz, 16 Bit. In der PC-Software (z.B. SDR Console) als
-*     Audioquelle waehlen. Frequenz 300-1500 Hz (Standard 700), Lautstaerke und
+*   - Nur Aufnahme, mono, 48 kHz, 16 Bit. Es erscheint nur ein Mikrofon (Aufnahmegeraet),
+*     KEIN Lautsprecher/Kopfhoerer: Der Sketch legt die Karte bewusst ohne Wiedergabepfad an
+*     (UAC_SPK_NONE), er braucht nur den CW-Ton Richtung PC. In der PC-Software
+*     (z.B. SDR Console) als Audioquelle waehlen. Frequenz 300-1500 Hz (Standard 700), Lautstaerke und
 *     Flankenzeit im Webinterface (wirken sofort); Ein/Aus braucht Neustart.
 *
 *  PIEZO
@@ -233,10 +281,12 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 * ------------------------------------------------------------------------------
 *  8. BEKANNTE EINSCHRAENKUNGEN
 * ------------------------------------------------------------------------------
-*   - "PTT via Pin" funktioniert erst, wenn Core UND vorkompilierte Libs
-*     CFG_TUD_CDC_NOTIFY=1 enthalten (siehe Abschnitt 3, Issue #13091).
-*   - Ob Windows (usbser.sys) die gesendeten SerialState-Bits DSR/DCD an Anwendungen
-*     weitergibt, ist noch nicht abschliessend verifiziert.
+*   - USB-Audio und "PTT via Pin" funktionieren erst mit dem Espressif-Core 3.3.13 (bzw. einem
+*     Master-Stand mit PR #13095 und #13113); die vorkompilierten Libs muessen
+*     CFG_TUD_CDC_NOTIFY=1 enthalten (siehe Abschnitt 3).
+*   - Die Statusleitungen belegen einen zusaetzlichen IN-Endpoint. Der ESP32-S3 hat nur wenige
+*     nutzbare IN-Endpoints (CDC-Daten, USB-Tastatur, USB-MIDI, USB-Audio): Sind alle Funktionen
+*     gleichzeitig aktiv, ist die Belegung knapp; dieser Grenzfall ist nicht abschliessend getestet.
 *   - DTR/RTS vom PC werden direkt aus TinyUSB gelesen (die Core-Ereignisse sind verlustbehaftet).
 *   - Webinterface ist unverschluesselt (HTTP) und der Hotspot-Schluessel steht im Quelltext.
 * ==============================================================================
@@ -280,6 +330,9 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 #include "esp_timer.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+#include "mbedtls/aes.h"       // Datei-Passwort-Verschluesselung (Einstellungen sichern/laden)
+#include "mbedtls/sha256.h"
+#include "esp_random.h"
 #include <type_traits>
 #include <utility>
 
@@ -304,8 +357,8 @@ const char* const DEFAULT_KEY_RIGHT = "RIGHT_CTRL";
 
 int debounceTime = 8;
 bool swapPaddles = false;
-unsigned long sleepTimeoutMs = 1200000;
-unsigned long webTimeoutMs = 180000;
+unsigned long sleepTimeoutMs = 0;          // Standard 0 = nie in den Tiefschlaf
+unsigned long webTimeoutMs = 0;            // Standard 0 = WLAN/Webinterface bleibt an
 uint32_t colorHeartbeat = 0x0000FF;
 uint32_t colorDot = 0xFF0000;
 uint32_t colorDash = 0x00FF00;
@@ -350,6 +403,26 @@ struct CdcNotifyApi<T, std::void_t<decltype(std::declval<T&>().notifyState(false
   static bool send(T& port, bool dcd, bool dsr, bool brk) { return port.notifyState(dcd, dsr, brk); }
 };
 typedef CdcNotifyApi<USBCDC> CdcNotify;
+// Optionale Core-Schalter (offizielle Schnittstelle, arduino-esp32 PR #13113):
+//  - tud_cdc_0_use_notify(): wird vom Core beim Aufbau des USB-Descriptors gefragt; true = echter
+//    Notification-Endpoint statt fest 0x85 (siehe unten, Wert aus g_cdcNotifyEp)
+//  - USBSerial.notifyStateIgnoreDtr(bool): notifyState() auch ohne DTR
+// Fehlt notifyStateIgnoreDtr() (Core ohne PR), uebersetzt der Sketch trotzdem und nutzt den Direktweg.
+static bool g_cdcNotifyEp = false;
+template <typename T, typename = void>
+struct CdcNotifyOpt {
+  static constexpr bool available = false;
+  static void endpoint(T&, bool on) { g_cdcNotifyEp = on; }
+  static void ignoreDtr(T&, bool) {}
+};
+template <typename T>
+struct CdcNotifyOpt<T, std::void_t<decltype(std::declval<T&>().notifyStateIgnoreDtr(false))>> {
+  static constexpr bool available = true;
+  static void endpoint(T&, bool on) { g_cdcNotifyEp = on; }
+  static void ignoreDtr(T& port, bool on) { port.notifyStateIgnoreDtr(on); }
+};
+typedef CdcNotifyOpt<USBCDC> CdcOpt;
+String cdcNotifyEndpointText();   // Vorwaertsdeklaration (Definition weiter unten, benutzt vom Webinterface)
 // Wert des TinyUSB-Schalters, mit dem die Core-Bibliotheken gebaut wurden (nur zur Anzeige, steuert nichts)
 #if defined(CFG_TUD_CDC_NOTIFY)
   #if CFG_TUD_CDC_NOTIFY
@@ -360,6 +433,17 @@ typedef CdcNotifyApi<USBCDC> CdcNotify;
 #else
   static const char* const CDC_NOTIFY_LIB = "unbekannt";
 #endif
+// Direktweg ohne DTR-Pruefung des Cores: Ist TinyUSB mit CFG_TUD_CDC_NOTIFY=1 gebaut (steht dann in den
+// Core-Bibliotheken), kann der Sketch die Serial-State-Meldung selbst ueber tud_cdc_n_notify_uart_state()
+// senden. Der Arduino-Core sendet sonst nur bei gesetztem DTR; Programme wie die SDR Console setzen DTR nicht.
+// Aktiv, wenn "DTR ignorieren" eingeschaltet und der Port ohne DTR geoeffnet ist. (Noch ungetestet:
+// ob Windows die Bits ohne DTR an die Anwendung weitergibt.)
+#if defined(CFG_TUD_CDC_NOTIFY) && CFG_TUD_CDC_NOTIFY
+  static constexpr bool NOTIFY_DIRECT = true;
+#else
+  static constexpr bool NOTIFY_DIRECT = false;
+#endif
+static constexpr bool NOTIFY_ANY = CdcNotify::available || NOTIFY_DIRECT;
 // Belegung: 0 = aus, 1 = DCD, 2 = DSR, 3 = Break (Break ist ein Ereignis, kein Dauerpegel - nicht empfohlen)
 bool serialDebug = true;                   // Diagnose-Ausgaben im seriellen Monitor (schliesst USB-Serial aus: gleicher COM-Port)
 #define DBG(...) do { if (serialDebug) Serial.printf(__VA_ARGS__); } while (0)
@@ -380,6 +464,7 @@ volatile bool serRtsRaw = false;
 volatile uint32_t serLineEvents = 0;       // Diagnose: Anzahl der empfangenen Line-State-Ereignisse
 volatile uint32_t serNotifyOk = 0;         // Diagnose: notifyState() erfolgreich / fehlgeschlagen
 volatile uint32_t serNotifyFail = 0;
+volatile uint32_t serNotifyDirect = 0;     // davon ueber den Direktweg (ohne DTR) gesendet
 // ---- Piezo-Mithoerton (sofort, ohne Lead time; Frequenz wie der USB-Audio-Ton) ----
 bool piezoEnabled = false;
 int piezoVolumePct = 50;                   // 1 - 100 %
@@ -424,6 +509,7 @@ USBAudioCard* audioCard = NULL;            // wird beim Programmstart angelegt (
 struct UsbEarlyInit {
   UsbEarlyInit() {
     bool kbd = true, midi = false, aud = false;   // gleiche Standardwerte wie loadSettings()
+    int mDot = 1, mDash = 2, mPtt = 0, mKey = 0;    // Belegung der Statusleitungen (0 = aus), wie loadSettings()
     if (nvs_flash_init() == ESP_OK) {
       nvs_handle_t h;
       if (nvs_open("morse-config", NVS_READONLY, &h) == ESP_OK) {
@@ -431,9 +517,18 @@ struct UsbEarlyInit {
         if (nvs_get_u8(h, "usbkbd_en", &v) == ESP_OK) kbd = (v != 0);
         if (nvs_get_u8(h, "usbmidi_en", &v) == ESP_OK) midi = (v != 0);
         if (nvs_get_u8(h, "usbaud_en", &v) == ESP_OK) aud = (v != 0);
+        int32_t m;
+        if (nvs_get_i32(h, "ser_dot", &m) == ESP_OK) mDot = m;
+        if (nvs_get_i32(h, "ser_dash", &m) == ESP_OK) mDash = m;
+        if (nvs_get_i32(h, "ser_ptt", &m) == ESP_OK) mPtt = m;
+        if (nvs_get_i32(h, "ser_key", &m) == ESP_OK) mKey = m;
         nvs_close(h);
       }
     }
+    // Statusleitungen gewuenscht (irgendeine Belegung != aus): echten Notification-Endpoint fuer die serielle
+    // Schnittstelle anfordern. Das muss HIER passieren, denn die USB-Deskriptoren entstehen schon vor setup().
+    // Kostet einen IN-Endpoint (auf dem S3 gibt es nur 4). Nur mit gepatchtem Core, sonst ohne Wirkung.
+    if (mDot != 0 || mDash != 0 || mPtt != 0 || mKey != 0) CdcOpt::endpoint(USBSerial, true);
     if (kbd) usbKeyboard = new USBHIDKeyboard();
     if (midi) usbMidi = new USBMIDI();
 #if MORSE_HAS_AUDIO
@@ -543,6 +638,9 @@ const KeyOption* usbLeftKey = nullptr;
 const KeyOption* usbRightKey = nullptr;
 const KeyOption* bleLeftKey = nullptr;
 const KeyOption* bleRightKey = nullptr;
+// Muss unterhalb von struct KeyOption stehen: Die Arduino-IDE setzt ihre automatischen Funktionsprototypen
+// vor die erste Funktion der Datei; steht diese Funktion davor, kennen die Prototypen den Typ noch nicht.
+bool tud_cdc_0_use_notify() { return g_cdcNotifyEp; }   // ueberschreibt die schwache Core-Funktion
 
 void addKeyOption(const char* group, const String& id, const String& label, uint8_t usage, uint8_t modBits) {
   KeyOption k;
@@ -698,8 +796,8 @@ void loadSettings() {
 prefs.begin("morse-config", true);
 debounceTime = prefs.getInt("debounce", 8);
 swapPaddles = prefs.getBool("swap", false);
-sleepTimeoutMs = prefs.getULong("timeout", 1200000);
-webTimeoutMs = prefs.getULong("web_timeout", 180000);
+sleepTimeoutMs = prefs.getULong("timeout", 0);
+webTimeoutMs = prefs.getULong("web_timeout", 0);
 colorHeartbeat = prefs.getUInt("c_heart", 0x0000FF);
 colorDot = prefs.getUInt("c_dot", 0xFF0000);
 colorDash = prefs.getUInt("c_dash", 0x00FF00);
@@ -928,13 +1026,51 @@ bool piezoPinAllowed(int p) {
 // (laengste Eintraege zuerst). Nicht uebersetzte Texte bleiben einfach deutsch.
 struct TrPair { const char* de; const char* en; };
 static const TrPair TR_TABLE[] = {
+  {"nur deklariert, aber ohne Funktion (Core-Bibliotheken ohne CFG_TUD_CDC_NOTIFY)", "declared only, without function (core libraries without CFG_TUD_CDC_NOTIFY)"},
+  {"vorhanden, aber das Senden schl&auml;gt fehl", "available, but sending fails"},
+  {"USB bereit", "USB ready"},
+  {"Core-Schalter (Patch) vorhanden", "Core switches (patch) present"},
+  {"CDC-Notification-Endpoint", "CDC notification endpoint"},
+  {"Sichert alle Einstellungen in einer lesbaren Textdatei und liest sie wieder ein. Beim Laden werden die Werte nur in die Seite &uuml;bernommen &ndash; dauerhaft gespeichert wird erst mit &bdquo;Einstellungen speichern&ldquo;. Fehlende Eintr&auml;ge in der Datei &auml;ndern nichts.", "Saves all settings to a readable text file and reads them back in. When loading, the values are only transferred into the page &ndash; they are stored permanently only with &ldquo;Save settings&rdquo;. Missing entries in the file change nothing."},
+  {"Beide Kn&ouml;pfe &ouml;ffnen zuerst ein kleines Fenster (beim Speichern: Dateiname; au&szlig;erdem WLAN-Zugangsdaten ja/nein und Datei-Passwort) und dann die Dateiauswahl des Browsers. Chrome/Edge k&ouml;nnen f&uuml;r Speichern und Laden denselben letzten Ordner merken, sofern die Seite eine &bdquo;sichere&ldquo; Adresse hat (siehe Anleitung im Sketch-Kopf). Sonst (z.&nbsp;B. Firefox) landet die Datei im Download-Ordner des Browsers, den Namen bestimmt das Feld im Fenster.",
+   "Both buttons first open a small window (when saving: file name; also include WiFi credentials yes/no and file password) and then the browser&rsquo;s file dialog. Chrome/Edge can use the same last folder for saving and loading if the page has a &ldquo;secure&rdquo; address (see the instructions at the top of the sketch). Otherwise (e.g. Firefox) the file goes to the browser&rsquo;s download folder, and the name is set in the window."},
+  {"Dateiname:", "File name:"},
+  {"Datei &bdquo;", "File &ldquo;"},
+  {"&ldquo; erstellt.", "&rdquo; created."},
+  {"Einstellungen als Datei speichern ...", "Save settings to file ..."},
+  {"Einstellungen aus Datei laden ...", "Load settings from file ..."},
+  {"Abbrechen", "Cancel"},
+  {"Einstellungen laden", "Load settings"},
+  {"Bitte ein Datei-Passwort eingeben.", "Please enter a file password."},
+  {"Abgebrochen.", "Cancelled."},
+  {"Dateiauswahl nicht m&ouml;glich.", "File dialog not available."},
+  {"Gespeichert: ", "Saved: "},
+  {"Speichern fehlgeschlagen.", "Saving failed."},
+  {" WLAN-Daten in der Datei wurden ignoriert (Haken bei WLAN-Zugangsdaten fehlt).", " The WiFi data in the file was ignored (the &ldquo;Include WiFi credentials&rdquo; box is not ticked)."},
+  {" WLAN-Passwort nicht &uuml;bernommen: bitte Datei-Passwort eingeben und die Datei erneut laden.", " WiFi password not loaded: please enter the file password and load the file again."},
+  {" WLAN-Passwort nicht entschl&uuml;sselt (Datei-Passwort falsch?).", " WiFi password could not be decrypted (wrong file password?)."},
+  {"WLAN-Zugangsdaten mit sichern/laden (Passwort verschl&uuml;sselt)", "Include WiFi credentials (password encrypted)"},
+  {"Datei-Passwort (nur f&uuml;r das WLAN-Passwort):", "File password (for the WiFi password only):"},
+  {". Bitte jetzt &bdquo;Einstellungen speichern&ldquo; dr&uuml;cken.", ". Now press &ldquo;Save settings&rdquo; to store them."},
+  {"Bitte zuerst ein Datei-Passwort eingeben.", "Please enter a file password first."},
+  {"Einstellungen als Datei speichern", "Save settings to file"},
+  {"Einstellungen aus Datei laden", "Load settings from file"},
+  {"Einstellungen sichern / laden", "Back up / restore settings"},
+  {"Datei konnte nicht gelesen werden.", "The file could not be read."},
+  {"Verschl&uuml;sselung fehlgeschlagen.", "Encryption failed."},
+  {"Werte &uuml;bernommen: ", "Values loaded: "},
+  {", ignoriert: ", ", ignored: "},
   {"<b>Hinweis:</b> BLE-MIDI und BLE-Tastatur funktionieren nicht gleichzeitig. Es ist immer nur ein Ger&auml;t verbunden &ndash; wer sich zuerst verbindet, belegt das Ger&auml;t. Im MIDI-Modus nutzt das Ger&auml;t eine eigene Bluetooth-Adresse, damit sich ein fr&uuml;her als Tastatur gekoppeltes Ger&auml;t nicht versehentlich verbindet. Beide Modi verlangen Pairing (Kopplung) &ndash; danach verbinden sich unterst&uuml;tzte Ger&auml;te (z.B. iOS 16+/macOS 13+) beim Einschalten automatisch wieder. Ob die jeweilige App das nutzt, h&auml;ngt von der App ab.", "<b>Note:</b> BLE MIDI and BLE keyboard do not work at the same time. Only one device is connected at a time &ndash; whoever connects first occupies the device. In MIDI mode the device uses its own Bluetooth address so that a device previously paired as a keyboard does not connect by accident. Both modes require pairing &ndash; afterwards supported devices (e.g. iOS 16+/macOS 13+) reconnect automatically at power-on. Whether the respective app uses this depends on the app."},
   {"<b>Achtung:</b> Sind USB-Tastatur UND USB-MIDI gleichzeitig aktiviert, kann es nach einem automatischen Einschlafen (Sleep-Timeout) und Aufwachen vorkommen, dass sich die USB-Treiber am PC aufh&auml;ngen &ndash; Aus-/Einstecken hilft dann nicht mehr, nur ein PC-Neustart. Setze in diesem Fall den Sleep-Timeout oben auf 0 (nie). Das WLAN/Webinterface ist davon nicht betroffen.", "<b>Warning:</b> If USB keyboard AND USB MIDI are enabled at the same time, the USB drivers on the PC may hang after an automatic sleep (sleep timeout) and wake-up &ndash; unplugging and replugging does not help then, only a PC restart. In that case set the sleep timeout above to 0 (never). The WLAN/web interface is not affected."},
-  {"Gelten f&uuml;r &bdquo;PTT via Serial Commands&ldquo; und &bdquo;PTT via Pin&ldquo;. Lead time = Vorlauf: Ton und Key-Leitung kommen erst so viel sp&auml;ter als PTT. Hold time = Haltezeit: PTT bleibt so lange nach dem letzten Zeichen aktiv.", "Apply to &ldquo;PTT via Serial Commands&rdquo; and &ldquo;PTT via Pin&rdquo;. Lead time: tone and key line come this much later than PTT. Hold time: PTT stays active this long after the last element."},
+  {"Gelten f&uuml;r &bdquo;PTT via Serial Commands&ldquo; und &bdquo;PTT via Pin&ldquo;.", "Apply to &ldquo;PTT via Serial Commands&rdquo; and &ldquo;PTT via Pin&rdquo;."},
   {"Betriebsart w&auml;hlen (BLE-Tastatur, BLE-MIDI oder BLE aus) und speichern. Die Noten und Tasten darunter gelten jeweils nur im angegebenen Modus (der nicht aktive Bereich ist abgeblendet) und werden getrennt gespeichert.", "Select the mode (BLE keyboard, BLE MIDI or BLE off) and save. The notes and keys below only apply to the respective mode (the inactive area is dimmed) and are stored separately."},
   {"stehen f&uuml;r Zeilenende). Leer = nichts senden. Eine Baudrate gibt es bei USB nicht, im Terminalprogramm ist jeder Wert in Ordnung. Voraussetzung: USB-Serial ist aktiviert und der COM-Port am PC ge&ouml;ffnet.", "stand for line ending). Empty = send nothing. USB has no baud rate, any value is fine in the terminal program. Prerequisite: USB serial is enabled and the COM port is opened on the PC."},
   {"Sendet zus&auml;tzlich zu den USB-Tastaturbefehlen echte USB-MIDI-Noten &ndash; unabh&auml;ngig von Bluetooth und von den BLE-MIDI-Noten. Ein-/Ausschalten braucht einen Neustart, Notenaenderungen wirken sofort.", "Sends real USB MIDI notes in addition to the USB keyboard commands &ndash; independent of Bluetooth and of the BLE MIDI notes. Switching on/off needs a restart, note changes take effect immediately."},
-  {"Die Frequenz entspricht der Einstellung &bdquo;Tone&ldquo; (Keyer). Der Piezo-Ton folgt dem Keyer sofort, ohne Lead time. Pins 19/20 (USB), 21 (LED) und die Paddle-Pins sind nicht erlaubt.", "The frequency follows the &ldquo;Tone&rdquo; setting (keyer). The piezo tone follows the keyer immediately, without lead time. Pins 19/20 (USB), 21 (LED) and the paddle pins are not allowed."},
+  {"Die Frequenz entspricht der Einstellung &bdquo;Tone&ldquo; (Keyer). Pins 19/20 (USB), 21 (LED) und die Paddle-Pins sind nicht erlaubt.", "The frequency follows the &ldquo;Tone&rdquo; setting (keyer). Pins 19/20 (USB), 21 (LED) and the paddle pins are not allowed."},
+  {"Der Piezo-Ton folgt dem Keyer sofort, ohne Lead time.", "The piezo tone follows the keyer immediately, without lead time."},
+  {"Der Ton im USB-Mikrofon wird um die Lead time (siehe PTT Timings) gegen&uuml;ber PTT verz&ouml;gert, damit das Funkger&auml;t nach dem Umschalten auf Senden Zeit hat, bevor der Ton ankommt. Das gilt nur, wenn PTT &uuml;ber Statusleitung oder serielle Befehle aktiv ist; sonst kommt der Ton sofort.", "The tone in the USB microphone is delayed against PTT by the lead time (see PTT timings), so the radio has time to switch to transmit before the tone arrives. This only applies if PTT is active via status line or serial commands; otherwise the tone comes immediately."},
+  {"Nach dem Loslassen des Paddles bleibt PTT noch f&uuml;r die Hold time aktiv (zuz&uuml;glich Lead time, da der Ton um diese Zeit verz&ouml;gert endet).", "After the paddle is released, PTT stays active for the hold time (plus the lead time, because the tone ends that much later)."},
+  {"Abstand zwischen PTT und Ton: PTT kommt sofort, Ton und Key-Leitung folgen nach der Lead time.", "Distance between PTT and tone: PTT comes immediately, tone and key line follow after the lead time."},
   {"&Auml;nderungen ohne Neustart wirken sofort, sind aber erst nach dem Speichern dauerhaft &ndash; der Knopf blinkt, solange noch nicht gespeichert wurde. Ein Neustart erfolgt nur, wenn er n&ouml;tig ist (WLAN, USB-Tastatur, USB-MIDI, USB-Audio, Bluetooth-Betriebsart).", "Changes that need no restart take effect immediately but are only permanent after saving &ndash; the button blinks while there are unsaved changes. A restart only happens when it is needed (WiFi, USB keyboard, USB MIDI, USB audio, Bluetooth mode)."},
   {"Einstellungen gespeichert (", "Settings saved ("},
   {"). Das Ger&auml;t startet neu ...", "). The device is restarting ..."},
@@ -956,7 +1092,7 @@ static const TrPair TR_TABLE[] = {
   {"Bluetooth Midi-Noten und Bluetooth Tasten speichern", "Save Bluetooth MIDI notes and Bluetooth keys"},
   {"Nur im Modus BLE-MIDI: Noten &amp; Lautst&auml;rke", "BLE MIDI mode only: notes &amp; volume"},
   {"USB-Audio aktivieren (Neustart bei &Auml;nderung)", "Enable USB audio (restarts on change)"},
-  {"Key (Keyer-Ausgang, um Lead time verz&ouml;gert)", "Key (keyer output, delayed by lead time)"},
+  {"Fertig getastetes Morsesignal vom Keyer, um Lead time verz&ouml;gert.", "Finished keyed Morse signal from the keyer, delayed by lead time."},
   {"Nach dem Speichern startet das Ger&auml;t neu.", "The device restarts after saving."},
   {"Oder manuell eingeben (z.B. verstecktes Netz):", "Or enter manually (e.g. hidden network):"},
   {"USB-Tastatur Ein/Aus speichern & neu starten", "Save USB keyboard on/off & restart"},
@@ -978,8 +1114,8 @@ static const TrPair TR_TABLE[] = {
   {"<p class='hint'>Dit/Dah geben den reinen Paddle-Status weiter (kein Keyer). Key ist der Ausgang des Keyers (Modus, Tempo und Farnsworth wirken hier).</p>", "<p class='hint'>Dit/Dah pass on the raw paddle state (no keyer). Key is the keyer output (mode, speed and Farnsworth apply).</p>"},
   {"Farnsworth: Die Zeichen werden mit dem Zeichentempo (Standard 18 WPM) gegeben, die Pausen zwischen den Zeichen so gedehnt, dass sich das oben eingestellte Tempo als Gesamttempo ergibt (Standardformel f&uuml;r das Wort PARIS). &Auml;ndert man das Tempo, wird die Dehnung automatisch neu berechnet. Der Keyer startet das n&auml;chste Zeichen nicht vor Ablauf des gedehnten Zeichenabstands. Ist das Tempo gleich oder h&ouml;her als das Zeichentempo, passiert nichts.", "Farnsworth: characters are sent at the character speed (standard 18 WPM); the gaps between characters are stretched so that the speed set above becomes the overall speed (standard formula for the word PARIS). When the speed is changed, the stretching is recalculated automatically. The keyer does not start the next character before the stretched character gap has elapsed. If the speed is equal to or higher than the character speed, nothing changes."},
   {"Sendepuffer belegt:", "TX buffer used:"},
-  {"DTR ignorieren (Befehle auch senden, wenn der Port ohne DTR ge&ouml;ffnet ist)", "Ignore DTR (send commands even if the port is opened without DTR)"},
-  {"Programme, die DTR nicht setzen (z.B. die SDR Console), brauchen &bdquo;DTR ignorieren&ldquo;; ist es abgeschaltet, wird nur bei gesetztem DTR gesendet.", "Programs that do not set DTR (e.g. SDR Console) need &ldquo;Ignore DTR&rdquo;; if it is off, commands are only sent while DTR is set."},
+  {"DTR ignorieren (Befehle und Statusleitungen auch senden, wenn der Port ohne DTR ge&ouml;ffnet ist)", "Ignore DTR (send commands and status lines even if the port is opened without DTR)"},
+  {"Programme, die DTR nicht setzen (z.B. die SDR Console), brauchen &bdquo;DTR ignorieren&ldquo;; ist es abgeschaltet, wird nur bei gesetztem DTR gesendet. Die Statusleitungen gehen ohne DTR nur, wenn die Core-Bibliotheken CFG_TUD_CDC_NOTIFY=1 enthalten.", "Programs that do not set DTR (e.g. SDR Console) need &ldquo;Ignore DTR&rdquo;; if it is off, data is only sent while DTR is set. Without DTR the status lines are only sent if the core libraries contain CFG_TUD_CDC_NOTIFY=1."},
   {"Mikrofon am PC ge&ouml;ffnet:", "Microphone opened on PC:"},
   {"Sonderzeichen (mit Umschalt)", "Special characters (with Shift)"},
   {"Taste Linkes Paddle (Punkt):", "Key left paddle (dot):"},
@@ -1211,6 +1347,17 @@ void sendSerMapRow(const char* label, const char* name, int sel) {
   sendT(h);
 }
 
+// Wie sendSerMapRow, aber mit kleinem Hinweis direkt unter der Beschriftung (kein Default-Argument: Arduino-Prototypen)
+void sendSerMapRowHint(const char* label, const char* hint, const char* name, int sel) {
+  const char* names[4] = {"Aus", "DCD", "DSR", "Break"};
+  String h = String("<div>") + label + "<p class='hint' style='margin:2px 0 6px 0;'>" + hint + "</p><select name='" + name + "'>";
+  for (int i = 0; i < 4; i++) {
+    h += String("<option value='") + i + "'" + (i == sel ? " selected" : "") + ">" + names[i] + "</option>";
+  }
+  h += "</select></div>";
+  sendT(h);
+}
+
 // Text fuer ein JavaScript-String-Literal in "..." (Labels sind HTML mit Entities, kein Zeilenumbruch)
 String jsEsc(const String& in) {
   String o;
@@ -1371,8 +1518,9 @@ void handleRoot() {
     "<p class='hint'>Der ESP32 meldet sich als virtueller COM-Port (Statusleitungen und PTT-Befehle) und optional als "
     "USB-Mikrofon mit CW-Ton. Alles au&szlig;er dem Ein/Aus des Mikrofons wirkt sofort.</p>");
   sendT(String("<p class='hint'>Arduino-Core: Statusleitungen <b>") +
-                     (!CdcNotify::available ? "NICHT vorhanden"
-                      : (String(CDC_NOTIFY_LIB) == "0" || (serNotifyOk == 0 && serNotifyFail > 0)) ? "nur deklariert, aber ohne Funktion (Core-Bibliotheken ohne CFG_TUD_CDC_NOTIFY)"
+                     (!NOTIFY_ANY ? "NICHT vorhanden"
+                      : (!NOTIFY_DIRECT && String(CDC_NOTIFY_LIB) == "0") ? "nur deklariert, aber ohne Funktion (Core-Bibliotheken ohne CFG_TUD_CDC_NOTIFY)"
+                      : (serNotifyOk == 0 && serNotifyFail > 0) ? "vorhanden, aber das Senden schl&auml;gt fehl"
                       : "vorhanden") +
                      " (CFG_TUD_CDC_NOTIFY=" + String(CDC_NOTIFY_LIB) + ")" +
                      "</b>, USB-Audio <b>" + (MORSE_HAS_AUDIO ? "vorhanden" : "NICHT vorhanden") +
@@ -1384,10 +1532,13 @@ void handleRoot() {
                      "</b> RTS <b>" + ((tud_cdc_n_get_line_state(0) & 2) ? 1 : 0) + "</b><b>" +
                      "</b><br>Zuletzt gemeldet: DCD=<b>" + (serSentDcd ? 1 : 0) + "</b> DSR=<b>" + (serSentDsr ? 1 : 0) +
                      "</b> Break=<b>" + (serSentBrk ? 1 : 0) +
-                     "</b>, Meldungen: ok <b>" + String((unsigned long)serNotifyOk) + "</b>, fehlgeschlagen <b>" + String((unsigned long)serNotifyFail) +
+                     "</b>, Meldungen: ok <b>" + String((unsigned long)serNotifyOk) + "</b> (davon ohne DTR <b>" + String((unsigned long)serNotifyDirect) + "</b>), fehlgeschlagen <b>" + String((unsigned long)serNotifyFail) +
                      "</b><br>Diagnose: Keyer-Takt <b>" + String((unsigned long)keyerTicks) + "</b>, Audio-Pakete <b>" +
                      String((unsigned long)audioFramesSent) + "</b>, Paddles (Dit/Dah) <b>" + (paddleDot ? 1 : 0) + "/" + (paddleDash ? 1 : 0) +
                      "</b>, Ton-Taste <b>" + (audioKeyed ? 1 : 0) +
+                     "</b>, USB bereit <b>" + (tud_ready() ? "ja" : "nein") +
+                     "</b><br>Core-Schalter (Patch) vorhanden: <b>" + (CdcOpt::available ? "ja" : "nein") +
+                     "</b>, CDC-Notification-Endpoint: <b>" + cdcNotifyEndpointText() +
                      "</b><br>PTT-Befehle: gesendet <b>" + String((unsigned long)serCmdSent) + "</b>, verworfen <b>" + String((unsigned long)serCmdDropped) + "</b></p>");
 
   // -- Keyer (Modus, Tempo, Ton) --
@@ -1410,20 +1561,22 @@ void handleRoot() {
     "<div>Rise time (ms, 1 - 20):<br><input type='number' name='aud_ramp' min='1' max='20' value='" + String(audioRampMs) + "'></div>");
 
   // -- Piezo-Mithoerton --
-  sendT("<h4 style='color:#ffdd57;margin-bottom:6px;'>Mith&ouml;rton (Piezo)</h4>");
+  sendT("<h4 style='color:#ffdd57;margin-bottom:6px;'>Mith&ouml;rton (Piezo)</h4>"
+        "<p class='hint' style='margin:0 0 10px 0;'>Der Piezo-Ton folgt dem Keyer sofort, ohne Lead time.</p>");
   {
     String pzChk = piezoEnabled ? "checked" : "";
     String pzDis = piezoEnabled ? "" : " disabled";
     sendT("<div class='row'><input type='checkbox' id='pz_en' name='pz_en' onchange='pzUpd()' style='width:auto;margin-right:10px;' " + pzChk + "><label>Piezo-Mith&ouml;rton aktivieren</label></div>"
           "<div>Volume: <b><span id='pz_vol_v'>" + String(piezoVolumePct) + "</span> %</b><br><input type='range' style='width:95%;' id='pz_vol' name='pz_vol' min='1' max='100' value='" + String(piezoVolumePct) + "' oninput='pz_vol_v.textContent=this.value'" + pzDis + "></div>"
           "<div>GPIO-Pin:<br><input type='number' id='pz_pin' name='pz_pin' min='1' max='48' value='" + String(piezoPin) + "'" + pzDis + "></div>"
-          "<p class='hint'>Die Frequenz entspricht der Einstellung &bdquo;Tone&ldquo; (Keyer). Der Piezo-Ton folgt dem Keyer sofort, ohne Lead time. "
+          "<p class='hint'>Die Frequenz entspricht der Einstellung &bdquo;Tone&ldquo; (Keyer). "
           "Pins 19/20 (USB), 21 (LED) und die Paddle-Pins sind nicht erlaubt.</p>"
           "<script>function pzUpd(){var e=document.getElementById('pz_en').checked;document.getElementById('pz_vol').disabled=!e;document.getElementById('pz_pin').disabled=!e;}</script>");
   }
 
   // -- USB-Audio --
-  sendT("<h4 style='color:#ffdd57;margin-bottom:6px;'>USB-Audio (Mikrofon)</h4>");
+  sendT("<h4 style='color:#ffdd57;margin-bottom:6px;'>USB-Audio (Mikrofon)</h4>"
+        "<p class='hint' style='margin:0 0 10px 0;'>Der Ton im USB-Mikrofon wird um die Lead time (siehe PTT Timings) gegen&uuml;ber PTT verz&ouml;gert, damit das Funkger&auml;t nach dem Umschalten auf Senden Zeit hat, bevor der Ton ankommt. Das gilt nur, wenn PTT &uuml;ber Statusleitung oder serielle Befehle aktiv ist; sonst kommt der Ton sofort.</p>");
   {
     String audChk = usbAudioEnabled ? "checked" : "";
     sendT("<div class='row'><input type='checkbox' name='usbaud_en' style='width:auto;margin-right:10px;' " + audChk + "><label>USB-Audio aktivieren (Neustart bei &Auml;nderung)</label></div>");
@@ -1442,28 +1595,28 @@ void handleRoot() {
   sendT("<p class='hint'>Dit/Dah geben den reinen Paddle-Status weiter (kein Keyer). Key ist der Ausgang des Keyers (Modus, Tempo und Farnsworth wirken hier).</p>");
   sendSerMapRow("Dit (linkes Paddle) &rarr;", "ser_dot", serMapDot);
   sendSerMapRow("Dah (rechtes Paddle) &rarr;", "ser_dash", serMapDash);
-  sendSerMapRow("Key (Keyer-Ausgang, um Lead time verz&ouml;gert) &rarr;", "ser_key", serMapKey);
+  sendSerMapRowHint("Key &rarr;", "Fertig getastetes Morsesignal vom Keyer, um Lead time verz&ouml;gert.", "ser_key", serMapKey);
 
   // -- PTT via Serial Commands (direkt darunter: PTT via Pin) --
   sendT(
     "<h4 style='color:#ffdd57;margin-bottom:6px;'>PTT via Serial Commands (CAT Interface)</h4>"
     "<div>TX command:<br><input type='text' name='ser_tx' value='" + htmlAttr(serTxCmd) + "'></div>"
     "<div>RX command:<br><input type='text' name='ser_rx' value='" + htmlAttr(serRxCmd) + "'></div>"
-    "<div class='row'><input type='checkbox' name='ser_nodtr' style='width:auto;margin-right:10px;' " + String(serIgnoreDtr ? "checked" : "") + "><label>DTR ignorieren (Befehle auch senden, wenn der Port ohne DTR ge&ouml;ffnet ist)</label></div>"
+    "<div class='row'><input type='checkbox' name='ser_nodtr' style='width:auto;margin-right:10px;' " + String(serIgnoreDtr ? "checked" : "") + "><label>DTR ignorieren (Befehle und Statusleitungen auch senden, wenn der Port ohne DTR ge&ouml;ffnet ist)</label></div>"
     "<p class='hint'>Die Befehle werden als Text &uuml;ber den COM-Port gesendet (z.B. <code>TX;</code> / <code>RX;</code>; "
     "<code>\\r</code> und <code>\\n</code> stehen f&uuml;r Zeilenende). Leer = nichts senden. Eine Baudrate gibt es bei "
-    "USB nicht, im Terminalprogramm ist jeder Wert in Ordnung. Voraussetzung: USB-Serial ist aktiviert und der COM-Port am PC ge&ouml;ffnet. Programme, die DTR nicht setzen (z.B. die SDR Console), brauchen &bdquo;DTR ignorieren&ldquo;; ist es abgeschaltet, wird nur bei gesetztem DTR gesendet.</p>");
+    "USB nicht, im Terminalprogramm ist jeder Wert in Ordnung. Voraussetzung: USB-Serial ist aktiviert und der COM-Port am PC ge&ouml;ffnet. Programme, die DTR nicht setzen (z.B. die SDR Console), brauchen &bdquo;DTR ignorieren&ldquo;; ist es abgeschaltet, wird nur bei gesetztem DTR gesendet. Die Statusleitungen gehen ohne DTR nur, wenn die Core-Bibliotheken CFG_TUD_CDC_NOTIFY=1 enthalten.</p>");
 
   // -- PTT via Pin --
   sendT("<h4 style='color:#ffdd57;margin-bottom:6px;'>PTT via Pin</h4>");
   {
     const char* names[4] = {"Aus", "DCD", "DSR", "Break"};
-    String sel = String("<div>PTT &rarr;<br><select name='ser_ptt'") + (CdcNotify::available ? "" : " disabled") + ">";
+    String sel = String("<div>PTT &rarr;<br><select name='ser_ptt'") + (NOTIFY_ANY ? "" : " disabled") + ">";
     for (int i = 0; i < 4; i++) {
       sel += String("<option value='") + i + "'" + (i == serMapPtt ? " selected" : "") + ">" + names[i] + "</option>";
     }
     sel += "</select></div>";
-    if (!CdcNotify::available) {
+    if (!NOTIFY_ANY) {
       sel += "<p class='hint'>Gesperrt: der installierte Arduino-Core kann die Statusleitungen noch nicht setzen "
              "(<code>USBCDC::notifyState()</code>, PR #13037). Sobald der Core das kann, wird die Auswahl freigegeben.</p>";
     }
@@ -1472,10 +1625,11 @@ void handleRoot() {
   // -- PTT Timings (gelten fuer beide PTT-Methoden) --
   sendT(
     "<h4 style='color:#ffdd57;margin-bottom:6px;'>PTT Timings</h4>"
-    "<div>Lead time (ms, 0 - 1000):<br><input type='number' name='klead' min='0' max='1000' value='" + String(keyLeadMs) + "'></div>"
-    "<div>Hold time (ms, 0 - 5000):<br><input type='number' name='ser_hang' min='0' max='5000' value='" + String(serPttHangMs) + "'></div>"
-    "<p class='hint'>Gelten f&uuml;r &bdquo;PTT via Serial Commands&ldquo; und &bdquo;PTT via Pin&ldquo;. Lead time = Vorlauf: Ton und "
-    "Key-Leitung kommen erst so viel sp&auml;ter als PTT. Hold time = Haltezeit: PTT bleibt so lange nach dem letzten Zeichen aktiv.</p>");
+    "<p class='hint' style='margin:0 0 10px 0;'>Gelten f&uuml;r &bdquo;PTT via Serial Commands&ldquo; und &bdquo;PTT via Pin&ldquo;.</p>"
+    "<div>Lead time (ms, 0 - 1000):<br><input type='number' name='klead' min='0' max='1000' value='" + String(keyLeadMs) + "'>"
+    "<p class='hint' style='margin:4px 0 0 0;'>Abstand zwischen PTT und Ton: PTT kommt sofort, Ton und Key-Leitung folgen nach der Lead time.</p></div>"
+    "<div>Hold time (ms, 0 - 5000):<br><input type='number' name='ser_hang' min='0' max='5000' value='" + String(serPttHangMs) + "'>"
+    "<p class='hint' style='margin:4px 0 0 0;'>Nach dem Loslassen des Paddles bleibt PTT noch f&uuml;r die Hold time aktiv (zuz&uuml;glich Lead time, da der Ton um diese Zeit verz&ouml;gert endet).</p></div>");
   sendT("</div>\n");
 
   // ---- Formular 3: Bluetooth (Modus + getrennte Belegung fuer MIDI bzw. Tastatur) ----
@@ -1553,6 +1707,167 @@ upd();
         "<p class='hint' style='margin:8px 0 0 0;'>&Auml;nderungen ohne Neustart wirken sofort, sind aber erst nach dem Speichern dauerhaft &ndash; der Knopf blinkt, solange noch nicht gespeichert wurde. "
         "Ein Neustart erfolgt nur, wenn er n&ouml;tig ist (WLAN, USB-Tastatur, USB-MIDI, USB-Audio, Bluetooth-Betriebsart).</p></div></form>");
   sendSelectData();
+
+  // ---- Einstellungen sichern / laden ----
+  // Die Datei entsteht und wird gelesen im Browser (liest/befuellt die Formularfelder per Namen). Beim Laden werden die Werte nur in die
+  // Seite uebernommen und per /apply live gesetzt; dauerhaft gespeichert wird erst mit dem Speichern-Knopf. Nur das WLAN-Passwort
+  // geht zum Ver-/Entschluesseln an /crypt (Datei-Passwort).
+  sendT("<div class='card'>"
+        "<h3 style='color:#ffdd57;margin-top:0;'>Einstellungen sichern / laden</h3>"
+        "<p class='hint'>Sichert alle Einstellungen in einer lesbaren Textdatei und liest sie wieder ein. Beim Laden werden die Werte nur in die Seite &uuml;bernommen &ndash; "
+        "dauerhaft gespeichert wird erst mit &bdquo;Einstellungen speichern&ldquo;. Fehlende Eintr&auml;ge in der Datei &auml;ndern nichts.</p>"
+        "<button type='button' class='btn btn-orange' id='fx_save'>Einstellungen als Datei speichern ...</button>"
+        "<button type='button' class='btn' id='fx_load' style='margin-top:10px;'>Einstellungen aus Datei laden ...</button>"
+        "<input type='file' id='fx_file' accept='.txt,.ini,text/plain' style='display:none'>"
+        "<p class='hint' id='fx_msg' style='margin:10px 0 0 0;'></p>"
+        "<p class='hint' style='margin:10px 0 0 0;'>Beide Kn&ouml;pfe &ouml;ffnen zuerst ein kleines Fenster (beim Speichern: Dateiname; au&szlig;erdem WLAN-Zugangsdaten ja/nein und Datei-Passwort) und dann die Dateiauswahl des Browsers. "
+        "Chrome/Edge k&ouml;nnen f&uuml;r Speichern und Laden denselben letzten Ordner merken, sofern die Seite eine &bdquo;sichere&ldquo; Adresse hat (siehe Anleitung im Sketch-Kopf). "
+        "Sonst (z.&nbsp;B. Firefox) landet die Datei im Download-Ordner des Browsers, den Namen bestimmt das Feld im Fenster.</p>"
+        "<dialog id='fx_dlg' style='background:#2d2d2d;color:#eee;border:1px solid #555;border-radius:10px;padding:20px;max-width:360px;width:90%;'>"
+        "<h3 id='fx_dt' style='color:#ffdd57;margin-top:0;'></h3>"
+        "<div id='fx_nmrow' style='margin-bottom:10px;'>Dateiname:<br><input type='text' id='fx_nm' autocomplete='off'></div>"
+        "<div class='row' style='margin:10px 0;'><input type='checkbox' id='fx_wlan' style='width:auto;margin-right:10px;'><label for='fx_wlan'>WLAN-Zugangsdaten mit sichern/laden (Passwort verschl&uuml;sselt)</label></div>"
+        "<div id='fx_pwrow' style='display:none;margin-bottom:10px;'>Datei-Passwort (nur f&uuml;r das WLAN-Passwort):<br><input type='password' id='fx_pw' autocomplete='new-password'></div>"
+        "<p class='hint' id='fx_dm' style='color:#ff7b7b;margin:0 0 10px 0;'></p>"
+        "<button type='button' class='btn btn-orange' id='fx_ok'>OK</button>"
+        "<button type='button' class='btn' id='fx_cancel' style='margin-top:8px;background:#666;'>Abbrechen</button>"
+        "</dialog></div>");
+  sendT(String("<input type='hidden' id='fx_ssid' value='") + htmlAttr(ssidHome) + "'>");
+  sendT(R"HTML(<script>
+(function(){
+var f=document.querySelector("form[action='/save_all']");if(!f)return;
+var SK={ssid_h:1,ssid_manual:1,pass_h:1};
+function g(i){return document.getElementById(i);}
+function say(t){g('fx_msg').innerHTML=t;}
+function two(n){return(n<10?'0':'')+n;}
+function lab(e){
+var t='';
+if(e.type=='checkbox'){var l=e.parentNode.querySelector('label');if(l)t=l.textContent;}
+else{var d=e.closest('div');if(d)for(var n=d.firstChild;n;n=n.nextSibling){if(n.nodeType==3&&n.nodeValue.trim()){t=n.nodeValue;break;}}}
+return t.replace(/\s+/g,' ').replace(/[: ]+$/,'').trim();
+}
+function val(e){return e.type=='checkbox'?(e.checked?'1':'0'):e.value;}
+function build(){
+var d=new Date();
+var L=['# Morse-S3 settings','# Created: '+d.getFullYear()+'-'+two(d.getMonth()+1)+'-'+two(d.getDate())+' '+two(d.getHours())+':'+two(d.getMinutes()),
+'# Format: name = value. Lines starting with # are comments. Checkboxes: 1 = on, 0 = off.',
+'# A missing entry leaves the current value unchanged when the file is loaded.','format = 1'];
+var hd=null,els=f.querySelectorAll('h2,h3,h4,[name]');
+for(var i=0;i<els.length;i++){var e=els[i],tg=e.tagName;
+if(tg=='H2'||tg=='H3'||tg=='H4'){hd=e.textContent.trim();continue;}
+if(SK[e.name])continue;
+if(hd!==null){L.push('','# ---- '+hd+' ----');hd=null;}
+var c=lab(e);if(c)L.push('# '+c);
+L.push(e.name+' = '+val(e));}
+return L;
+}
+function dl(L,nm){
+nm=nm||'morse-s3-settings.txt';
+var a=document.createElement('a');
+a.href=URL.createObjectURL(new Blob(['\ufeff'+L.join('\r\n')+'\r\n'],{type:'text/plain;charset=utf-8'}));
+a.download=nm;document.body.appendChild(a);a.click();
+setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},2000);
+say('Datei &bdquo;'+nm+'&ldquo; erstellt.');
+}
+var PID='morse-s3-settings',TYP=[{description:'Text',accept:{'text/plain':['.txt','.ini']}}];
+var SEC=!!(window.isSecureContext&&window.showSaveFilePicker&&window.showOpenFilePicker);
+var mode='';
+function pwrow(){g('fx_pwrow').style.display=g('fx_wlan').checked?'block':'none';}
+function dlg(m){mode=m;g('fx_nmrow').style.display=(m=='save'?'block':'none');if(m=='save'){var d=new Date();g('fx_nm').value='morse-s3-settings_'+d.getFullYear()+'-'+two(d.getMonth()+1)+'-'+two(d.getDate())+'_'+two(d.getHours())+two(d.getMinutes())+'.txt';}g('fx_dt').textContent=(m=='save'?'Einstellungen speichern':'Einstellungen laden');g('fx_pw').value='';g('fx_dm').textContent='';pwrow();g('fx_dlg').showModal();}
+g('fx_wlan').onchange=pwrow;
+g('fx_cancel').onclick=function(){g('fx_dlg').close();};
+g('fx_save').onclick=function(){dlg('save');};
+g('fx_load').onclick=function(){dlg('load');};
+g('fx_ok').onclick=function(){
+if(g('fx_wlan').checked&&!g('fx_pw').value){g('fx_dm').textContent='Bitte ein Datei-Passwort eingeben.';return;}
+g('fx_dlg').close();
+if(mode=='save')doSave();else doLoad();
+};
+function canc(e){say(e&&e.name=='AbortError'?'Abgebrochen.':'Dateiauswahl nicht m&ouml;glich.');}
+function out(L,h,nm){
+if(!h){dl(L,nm);return;}
+var txt='\ufeff'+L.join('\r\n')+'\r\n';
+h.createWritable().then(function(w){return w.write(new Blob([txt],{type:'text/plain;charset=utf-8'})).then(function(){return w.close();});})
+.then(function(){say('Gespeichert: '+h.name);})
+.catch(function(){say('Speichern fehlgeschlagen.');});
+}
+function fname(){var n=g('fx_nm').value.replace(/[\\\/:*?\x22<>|]/g,'').trim();if(!n)n='morse-s3-settings.txt';if(n.indexOf('.')<0)n+='.txt';return n;}
+function doSave(){
+var h=null,nm=fname();
+function go(){
+var L=build();
+if(!g('fx_wlan').checked){out(L,h,nm);return;}
+var pw=g('fx_pw').value;g('fx_pw').value='';
+var sm=f.elements['ssid_manual'],ss=f.elements['ssid_h'];
+var s=(sm&&sm.value.trim())||(ss&&ss.value)||g('fx_ssid').value;
+var p=f.elements['pass_h'].value;
+L.push('','# ---- WLAN ----','# The password is encrypted (AES-256) with the file password.','wlan_ssid = '+s);
+if(!p){L.push('wlan_pass_enc = ');out(L,h,nm);return;}
+fetch('/crypt',{method:'POST',body:new URLSearchParams({mode:'enc',pw:pw,data:p})})
+.then(function(r){if(!r.ok)throw 0;return r.text();})
+.then(function(t){L.push('wlan_pass_enc = '+t);out(L,h,nm);})
+.catch(function(){say('Verschl&uuml;sselung fehlgeschlagen.');});
+}
+if(SEC){window.showSaveFilePicker({id:PID,suggestedName:nm,types:TYP}).then(function(x){h=x;go();}).catch(canc);}
+else go();
+}
+function doLoad(){
+if(SEC){window.showOpenFilePicker({id:PID,types:TYP}).then(function(a){return a[0].getFile();}).then(function(fl){return fl.text();}).then(imp).catch(canc);}
+else g('fx_file').click();
+}
+function setv(e,v){
+if(e.type=='checkbox'){e.checked=/^(1|true|yes|ja|on|an)$/i.test(v);return true;}
+var o=e.value;e.value=v;
+if(e.tagName=='SELECT'&&e.value!==v){e.value=o;return false;}
+return true;
+}
+function fire(e){e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));}
+function fin(n,bad,w){
+g('fx_pw').value='';
+if(window.upd)upd();if(window.fUpd)fUpd();if(window.pzUpd)pzUpd();
+var b=f.querySelector("input[type=submit]");if(b)b.classList.add('dirty');
+say('Werte &uuml;bernommen: '+n+(bad?', ignoriert: '+bad:'')+'. Bitte jetzt &bdquo;Einstellungen speichern&ldquo; dr&uuml;cken.'+w);
+}
+function imp(txt){
+var kv=Object.create(null),ls=txt.replace(/^\ufeff/,'').split(/\r?\n/),i,k;
+for(i=0;i<ls.length;i++){var l=ls[i];if(!l.trim()||/^\s*[#;]/.test(l))continue;
+var p=l.indexOf('=');if(p<1)continue;
+var v=l.substring(p+1);if(v.charAt(0)==' ')v=v.substring(1);
+kv[l.substring(0,p).trim()]=v;}
+var map=Object.create(null),all=f.querySelectorAll('[name]'),n=0,bad=0,hasW=false;
+for(i=0;i<all.length;i++)map[all[i].name]=all[i];
+for(k in kv){
+if(k=='format')continue;
+if(k.indexOf('wlan_')==0){hasW=true;continue;}
+var e=map[k];
+if(!e||SK[k]||!setv(e,kv[k])){bad++;continue;}
+fire(e);n++;}
+var w='';
+if(!hasW){fin(n,bad,w);return;}
+if(!g('fx_wlan').checked){fin(n,bad,' WLAN-Daten in der Datei wurden ignoriert (Haken bei WLAN-Zugangsdaten fehlt).');return;}
+var sm=f.elements['ssid_manual'],pe=f.elements['pass_h'];
+if(kv.wlan_ssid!==undefined&&sm){sm.value=kv.wlan_ssid;fire(sm);n++;}
+var pe_=kv.wlan_pass_enc;
+if(pe_===undefined||!pe){fin(n,bad,w);return;}
+if(pe_===''){pe.value='';fire(pe);n++;fin(n,bad,w);return;}
+var pw=g('fx_pw').value;
+if(!pw){fin(n,bad,' WLAN-Passwort nicht &uuml;bernommen: bitte Datei-Passwort eingeben und die Datei erneut laden.');return;}
+fetch('/crypt',{method:'POST',body:new URLSearchParams({mode:'dec',pw:pw,data:pe_})})
+.then(function(r){if(!r.ok)throw 0;return r.text();})
+.then(function(t){pe.value=t;fire(pe);fin(n+1,bad,w);})
+.catch(function(){fin(n,bad,' WLAN-Passwort nicht entschl&uuml;sselt (Datei-Passwort falsch?).');});
+}
+g('fx_file').onchange=function(){
+var inp=this,fl=inp.files[0];if(!fl)return;
+var rd=new FileReader();
+rd.onload=function(){imp(String(rd.result));};
+rd.onerror=function(){say('Datei konnte nicht gelesen werden.');};
+rd.readAsText(fl);
+inp.value='';
+};
+})();
+</script></div>
+)HTML");
   sendT("</body></html>");
   sendT("");  // Ende der chunked-Antwort
 }
@@ -1685,6 +2000,103 @@ void handleSaveAll() {
   }
 }
 
+// ---- Einstellungen sichern/laden: Verschluesselung des WLAN-Passworts fuer die Datei ----
+// Die Datei selbst entsteht im Browser; nur das WLAN-Passwort wird hier verschluesselt/entschluesselt.
+// AES-256-CBC, Schluessel aus Datei-Passwort + Zufalls-Salt (8000 SHA-256-Runden), Zufalls-IV.
+// Format: MP1$salt$iv$daten (alles hex). Der Klartext beginnt mit "MPW1": daran wird ein falsches
+// Datei-Passwort beim Entschluesseln erkannt.
+static int fcHv(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return -1;
+}
+static String fcHex(const uint8_t* b, size_t n) {
+  static const char* d = "0123456789abcdef";
+  String o;
+  o.reserve(n * 2);
+  for (size_t i = 0; i < n; i++) { o += d[b[i] >> 4]; o += d[b[i] & 15]; }
+  return o;
+}
+static bool fcUnhex(const String& s, uint8_t* out, size_t n) {
+  if (s.length() != n * 2) return false;
+  for (size_t i = 0; i < n; i++) {
+    int hi = fcHv(s[2 * i]), lo = fcHv(s[2 * i + 1]);
+    if (hi < 0 || lo < 0) return false;
+    out[i] = (uint8_t)((hi << 4) | lo);
+  }
+  return true;
+}
+static void fcKey(const String& pw, const uint8_t* salt, uint8_t* key) {
+  uint8_t h[32];
+  memset(h, 0, sizeof(h));
+  for (int r = 0; r < 8000; r++) {
+    mbedtls_sha256_context c;
+    mbedtls_sha256_init(&c);
+    mbedtls_sha256_starts(&c, 0);
+    mbedtls_sha256_update(&c, h, 32);
+    mbedtls_sha256_update(&c, salt, 8);
+    mbedtls_sha256_update(&c, (const unsigned char*)pw.c_str(), pw.length());
+    mbedtls_sha256_finish(&c, h);
+    mbedtls_sha256_free(&c);
+  }
+  memcpy(key, h, 32);
+}
+// Liefert bei Fehler (leeres Passwort, falsches Format, falsches Datei-Passwort) einen leeren String.
+static String fileCrypt(bool enc, const String& pw, const String& data) {
+  if (pw.length() == 0 || data.length() == 0) return "";
+  uint8_t key[32], iv[16], salt[8], buf[160], out[160];
+  mbedtls_aes_context aes;
+  if (enc) {
+    size_t n = 4 + data.length();
+    if (n > 128) return "";
+    memcpy(buf, "MPW1", 4);
+    memcpy(buf + 4, data.c_str(), data.length());
+    size_t pad = 16 - (n % 16);
+    size_t total = n + pad;
+    memset(buf + n, (int)pad, pad);
+    esp_fill_random(salt, sizeof(salt));
+    esp_fill_random(iv, sizeof(iv));
+    fcKey(pw, salt, key);
+    uint8_t ivc[16];
+    memcpy(ivc, iv, 16);
+    mbedtls_aes_init(&aes);
+    mbedtls_aes_setkey_enc(&aes, key, 256);
+    mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, total, ivc, buf, out);
+    mbedtls_aes_free(&aes);
+    return "MP1$" + fcHex(salt, 8) + "$" + fcHex(iv, 16) + "$" + fcHex(out, total);
+  }
+  if (!data.startsWith("MP1$")) return "";
+  int p2 = data.indexOf('$', 4);
+  if (p2 < 0) return "";
+  int p3 = data.indexOf('$', p2 + 1);
+  if (p3 < 0) return "";
+  String cHex = data.substring(p3 + 1);
+  size_t total = cHex.length() / 2;
+  if (total < 16 || total > 144 || (total % 16) != 0) return "";
+  if (!fcUnhex(data.substring(4, p2), salt, 8)) return "";
+  if (!fcUnhex(data.substring(p2 + 1, p3), iv, 16)) return "";
+  if (!fcUnhex(cHex, buf, total)) return "";
+  fcKey(pw, salt, key);
+  mbedtls_aes_init(&aes);
+  mbedtls_aes_setkey_dec(&aes, key, 256);
+  mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, total, iv, buf, out);
+  mbedtls_aes_free(&aes);
+  size_t pad = out[total - 1];
+  if (pad < 1 || pad > 16 || pad > total) return "";
+  for (size_t i = total - pad; i < total; i++) if (out[i] != pad) return "";
+  size_t len = total - pad;
+  if (len <= 4 || memcmp(out, "MPW1", 4) != 0) return "";
+  out[len] = 0;
+  return String((const char*)(out + 4));
+}
+void handleCrypt() {
+  lastWebActivityTime = millis();
+  String r = fileCrypt(server.arg("mode") == "enc", server.arg("pw"), server.arg("data"));
+  if (r.length() == 0) server.send(400, "text/plain", "fail");
+  else server.send(200, "text/plain", r);
+}
+
 void goToDeepSleep() {
 rgbLed.setPixelColor(0, 0);
 rgbLed.show();
@@ -1698,6 +2110,35 @@ esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
 esp_sleep_enable_ext1_wakeup((1ULL << pin_paddle_links) | (1ULL << pin_paddle_rechts), ESP_EXT1_WAKEUP_ANY_LOW);
 esp_deep_sleep_start();
 }
+// Diagnose: liest aus dem aktuellen USB-Konfigurationsdeskriptor, welchen Endpoint die CDC-Schnittstelle fuer
+// Notifications (Statusleitungen) wirklich benutzt. 0x85 = fester Wert des Cores (auf S2/S3 ohne TX-FIFO, Senden schlaegt fehl).
+String cdcNotifyEndpointText() {
+  const uint8_t* d = tud_descriptor_configuration_cb(0);
+  if (d == NULL) return String("unbekannt");
+  uint16_t total = d[2] | (d[3] << 8);
+  bool inCdcCtrl = false;
+  for (uint16_t i = 0; i + 1 < total && d[i] > 0; i += d[i]) {
+    if (d[i + 1] == 4) inCdcCtrl = (d[i + 5] == 0x02 && d[i + 6] == 0x02);   // Interface: Klasse CDC, Unterklasse ACM
+    else if (d[i + 1] == 5 && inCdcCtrl) { char b[8]; snprintf(b, sizeof(b), "0x%02X", d[i + 2]); return String(b); }
+  }
+  return String("nicht gefunden");
+}
+// ---- USB-Serial: Serial-State direkt ueber TinyUSB senden (ohne DTR-Pruefung des Arduino-Cores) ----
+// Gleicher Aufruf wie in USBCDC::notifyState() (cores/esp32/USBCDC.cpp), nur ohne die Pruefung
+// tud_cdc_n_connected(). Ohne CFG_TUD_CDC_NOTIFY wird nichts davon uebersetzt.
+bool sendNotifyDirect(bool dcd, bool dsr, bool brk) {
+#if defined(CFG_TUD_CDC_NOTIFY) && CFG_TUD_CDC_NOTIFY
+  cdc_notify_uart_state_t st;
+  st.value = 0;
+  st.dcd = dcd;
+  st.dsr = dsr;
+  st.brk = brk;
+  return tud_cdc_n_notify_uart_state(0, &st);
+#else
+  (void)dcd; (void)dsr; (void)brk;
+  return false;
+#endif
+}
 // ---- USB-Serial: gewuenschte Pegel berechnen und bei Aenderung an den PC melden ----
 void updateSerialLines(bool dot, bool dash, bool key, bool ptt) {
   {
@@ -1706,7 +2147,7 @@ void updateSerialLines(bool dot, bool dash, bool key, bool ptt) {
     if (open && !serPortOpen) serResync = true;
     serPortOpen = open;
   }
-  if (!CdcNotify::available) return;
+  if (!NOTIFY_ANY) return;
   bool want[4] = {false, false, false, false};  // Index = Belegung (0 wird ignoriert)
   if (usbSerialEnabled) {
     want[serMapDot] |= dot;
@@ -1723,7 +2164,13 @@ void updateSerialLines(bool dot, bool dash, bool key, bool ptt) {
   int64_t nowUs = esp_timer_get_time();
   if (nowUs - lastFailUs < 50000) return;
   serResync = false;
-  if (CdcNotify::send(USBSerial, dcd, dsr, brk)) {
+  bool sentOk = false;
+  bool direct = false;
+  CdcOpt::ignoreDtr(USBSerial, serIgnoreDtr);   // Core mit Patch: Option "DTR ignorieren" direkt im Core
+  if (NOTIFY_DIRECT && !CdcOpt::available && serIgnoreDtr && !serPortOpen) { sentOk = sendNotifyDirect(dcd, dsr, brk); direct = true; }
+  else if (CdcNotify::available) sentOk = CdcNotify::send(USBSerial, dcd, dsr, brk);
+  if (sentOk) {
+    if (direct) serNotifyDirect = serNotifyDirect + 1;
     serSentDcd = dcd; serSentDsr = dsr; serSentBrk = brk;
     serNotifyOk = serNotifyOk + 1;
   } else {
@@ -1916,7 +2363,7 @@ void KeyerTask(void* pvParameters) {
     }
 
     // Vorlauf nur, wenn irgendeine PTT-Methode (Pin oder serielle Befehle) aktiv ist
-    bool pttCfg = usbSerialEnabled && ((serMapPtt != 0 && CdcNotify::available) || serCmdActive);
+    bool pttCfg = usbSerialEnabled && ((serMapPtt != 0 && NOTIFY_ANY) || serCmdActive);
     int lead = pttCfg ? constrain(keyLeadMs, 0, 1000) : 0;
     if (busy || dot || dash) { lastAct = now; ptt = true; }
     else if (ptt && (now - lastAct) > ((int64_t)serPttHangMs + lead) * 1000LL) ptt = false;
@@ -2073,6 +2520,7 @@ DBG("USB aktiv: Tastatur=%d MIDI=%d Audio=%d (Einstellung: %d/%d/%d)\n", usbKeyb
 #else
 DBG("USB aktiv: Tastatur=%d MIDI=%d Audio=0 (Einstellung: %d/%d/%d)\n", usbKeyboard != NULL, usbMidi != NULL, usbKeyboardEnabled, usbMidiEnabled, usbAudioEnabled);
 #endif
+CdcOpt::ignoreDtr(USBSerial, serIgnoreDtr);
 USB.begin();
 gpio_hold_dis((gpio_num_t)pin_paddle_links);
 gpio_hold_dis((gpio_num_t)pin_paddle_rechts);
@@ -2179,6 +2627,7 @@ server.on("/rescan", handleRescan);
 server.on("/ping", []() { server.send(200, "text/plain", "ok"); });   // kleine Antwort fuer die Neustart-Seite (statt die ganze Konfigseite abzufragen)
 server.on("/save_all", handleSaveAll);
 server.on("/apply", HTTP_POST, handleApply);
+server.on("/crypt", HTTP_POST, handleCrypt);
 server.on("/save_lang", handleSaveLang);
 server.begin();
 lastActivityTime = millis();
