@@ -3,7 +3,7 @@
 # Adapter Configuration
 
 There is a possibility to configure this adapter via a web frontend (WiFi).
-You can find some example configurations in folder  [exampleConfiguratios](exampleConfiguratios/)<br> 
+You can find some example configurations in folder  [exampleConfiguratios](../exampleConfiguratios/)<br> 
 
 ## How the configuration page works
 * Most settings take effect **immediately**, as soon as you change them (number and text fields after you leave the field).
