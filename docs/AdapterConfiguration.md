@@ -150,10 +150,8 @@ At the bottom of the page you can save all settings into a text file and load th
 The file is a readable text file (lines `name = value`, comments start with `#`) and may be edited by hand.
 
 Where the file goes depends on your browser: Chrome and Edge can show a normal file dialog and remember the last folder, but only on a "secure" page. Because the adapter page is `http://192.168.x.x` this has to be allowed once in `chrome://flags/#unsafely-treat-insecure-origin-as-secure` (Edge: `edge://flags/...`). Otherwise (and in Firefox) the file is downloaded into your download folder.
-
-
-
 <br clear="left"/>
 <br>
 <br>
-[← back to table of contents](README.md)
+[← back to table of contents](./README.md)
+<br>
