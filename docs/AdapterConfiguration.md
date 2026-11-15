@@ -1,5 +1,3 @@
-<img src="ConfigurationPage.jpg" align="left">
-
 # Adapter Configuration
 
 There is a possibility to configure this adapter via a web frontend (WiFi).
@@ -19,18 +17,6 @@ As a first step it's a good idea to connect the adapter to your home network. Th
 
 Afterwards the adapter can also be reached in your home network via http://morse-s3.local or via the IP address assigned by your router. If the home network cannot be reached, the adapter opens its own hotspot again.
 
-## Language
-Currently you can select between "English" and "German" language. The page switches immediately.
-
-## Paddle
-* **Debounce time (ms):** Contacts of a paddle often "bounce" for a short moment. The adapter ignores changes that happen within this time. The default of 8 ms is fine for most paddles; increase it if you get double dits or dahs.
-* **Swap paddles (L/R):** Swaps the "dit" and "dah" paddle if your paddle is wired the other way round (or you hold it left-handed).
-
-## ESP32 behavior
-* **Sleep timeout (min, 0 = never):** After this time without paddle activity the ESP32 goes into deep sleep to save power. Pressing the paddle wakes it up again. If more than one interface (keyboard, MIDI..) is used, sleep mode should not be activated (set it to 0).
-* **Web timeout (min, 0 = never):** After this time the WiFi (and with it the configuration page) is switched off. Set it to 0 while you are configuring.
-* **LED colors:** The onboard LED generates a heartbeat (blinks every second) as soon as the ESP32 has booted or left sleep mode. The color of this heartbeat can be adjusted ("Color heartbeat"). Additionally the LED turns "red"/"green" while the dot/dash key is pressed. These colors can be changed too ("Color dot", "Color dash").
-
 ## Not all USB functions at the same time
 The USB interface of the ESP32-S3 has only a **limited number of endpoints** (4 usable "IN" endpoints). Every USB function needs one of them:
 
@@ -48,6 +34,20 @@ Recommendation:
 * Activate only what you really need (e.g. USB audio plus status pins for SDR-Console, or the USB keyboard for browser based programs).
 * If status pins are not needed, leave all pins ("Dit", "Dah", "Key", "PTT") on "Off"; then the additional endpoint is not used.
 * Bluetooth does not use USB endpoints and can be used independently.
+
+<img src="ConfigurationPage.jpg" align="left">
+
+## Language
+Currently you can select between "English" and "German" language. The page switches immediately.
+
+## Paddle
+* **Debounce time (ms):** Contacts of a paddle often "bounce" for a short moment. The adapter ignores changes that happen within this time. The default of 8 ms is fine for most paddles; increase it if you get double dits or dahs.
+* **Swap paddles (L/R):** Swaps the "dit" and "dah" paddle if your paddle is wired the other way round (or you hold it left-handed).
+
+## ESP32 behavior
+* **Sleep timeout (min, 0 = never):** After this time without paddle activity the ESP32 goes into deep sleep to save power. Pressing the paddle wakes it up again. If more than one interface (keyboard, MIDI..) is used, sleep mode should not be activated (set it to 0).
+* **Web timeout (min, 0 = never):** After this time the WiFi (and with it the configuration page) is switched off. Set it to 0 while you are configuring.
+* **LED colors:** The onboard LED generates a heartbeat (blinks every second) as soon as the ESP32 has booted or left sleep mode. The color of this heartbeat can be adjusted ("Color heartbeat"). Additionally the LED turns "red"/"green" while the dot/dash key is pressed. These colors can be changed too ("Color dot", "Color dash").
 
 ## USB Keyboard
 The ESP32 can emulate a USB keyboard. Default keys are "Left Ctrl" and "Right Ctrl" for "dot" and "dash".
