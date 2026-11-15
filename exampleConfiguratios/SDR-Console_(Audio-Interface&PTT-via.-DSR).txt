@@ -1,0 +1,109 @@
+﻿# Morse-S3 settings
+# Created: 2026-11-15 19:41
+# Format: name = value. Lines starting with # are comments. Checkboxes: 1 = on, 0 = off.
+# A missing entry leaves the current value unchanged when the file is loaded.
+format = 1
+
+# ---- Morse-S3 Config ----
+# Debounce (ms)
+debounce = 8
+# Swap paddles (L/R)
+swap = 0
+# Sleep timeout (min, 0 = never)
+timeout = 0
+# Web timeout (min, 0 = never)
+web_timeout = 0
+# Color heartbeat
+c_heart = #0000ff
+# Color dot
+c_dot = #ff0000
+# Color dash
+c_dash = #00ff00
+
+# ---- USB keyboard (cable) ----
+# Enable USB keyboard
+usbkbd_en = 0
+# Key left paddle (dot)
+usb_left = LEFT_CTRL
+# Key right paddle (dash)
+usb_right = RIGHT_CTRL
+
+# ---- USB MIDI (cable) ----
+# Enable USB MIDI
+usbmidi_en = 0
+# Note left paddle (dot)
+usbmidi_dot = 18
+# Note right paddle (dash)
+usbmidi_dash = 38
+
+# ---- Keyer ----
+# Mode
+kmode = 1
+# Speed (WPM, 5 - 60)
+kwpm = 17
+# Farnsworth
+kfarn = 1
+# Character speed (WPM, 5 - 60)
+kcwpm = 9
+# Tone (Hz, 300 - 1500)
+aud_freq = 700
+# Rise time (ms, 1 - 20)
+aud_ramp = 5
+
+# ---- Sidetone (piezo) ----
+# Enable piezo sidetone
+pz_en = 1
+# Volume
+pz_vol = 83
+# GPIO pin
+pz_pin = 7
+
+# ---- USB audio (microphone) ----
+# Enable USB audio (restarts on change)
+usbaud_en = 1
+# Volume
+aud_vol = 6
+
+# ---- USB-Serial ----
+# Enable USB serial (lines, commands and PTT)
+usbser_en = 1
+# Serial debug messages (diagnostics in the serial monitor)
+dbg_en = 0
+# Dit (left paddle) →
+ser_dot = 0
+# Dah (right paddle) →
+ser_dash = 0
+# Key →
+ser_key = 0
+
+# ---- PTT via Serial Commands (CAT Interface) ----
+# TX command
+ser_tx = 
+# RX command
+ser_rx = 
+# Ignore DTR (send commands and status lines even if the port is opened without DTR)
+ser_nodtr = 1
+
+# ---- PTT via Pin ----
+# PTT →
+ser_ptt = 2
+
+# ---- PTT Timings ----
+# Lead time (ms, 0 - 1000)
+klead = 150
+# Hold time (ms, 0 - 5000)
+ser_hang = 300
+
+# ---- Bluetooth ----
+# Mode
+bt_mode = 2
+# Note left paddle (dot)
+midi_dot = 18
+# Note right paddle (dash)
+midi_dash = 38
+# Volume (MIDI CC7)
+midi_vol = 127
+# Key left paddle (dot)
+bt_left = LEFT_CTRL
+# Key right paddle (dash)
+bt_right = RIGHT_CTRL
