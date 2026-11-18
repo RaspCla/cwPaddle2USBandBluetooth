@@ -20,3 +20,19 @@ Take care to order the correct ESP32-S3 Mini board (e.g. Heemol ESP32-S3 Mini, 1
 The sketch needs the **ESP32 Arduino core 3.3.13** from Espressif (released on 17 November 2026) or newer. Install it via the Arduino Boards Manager ("esp32" by Espressif Systems). The USB-Audio interface (morse tone as microphone) and the USB-Serial status pins (DCD/DSR for PTT) depend on it; the sketch uses only the official core interfaces, no patched libraries are required. With an older core the sketch stops with an error message when compiling.
 
 Details (board settings, libraries) can be found in the header of the ino-file.
+
+Many thanks to the Espressif team: I received great support and the extension of the core that made this possible. Without it, this project would not be available in this form.
+
+
+## 3D Model
+The 3D model of the case I used (developed by i-BoxIt) you can find on MakerWorld under the name "ESP32-S3 SuperMini Gehäuse".
+Direct Link: https://makerworld.com/de/models/2851590-esp32-s3-supermini-case-snap-fit-options?from=search#profileId-3180623
+
+
+## License
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
+Noncommercial use and modification are permitted; commercial use requires prior
+agreement with the author. The full license text is in [LICENSE](LICENSE).
+
+Required Notice: Copyright (c) 2026 RaspCla (https://github.com/RaspCla)<br>
+Required Notice: Project: cwPaddle2USBandBluetooth (https://github.com/RaspCla/cwPaddle2USBandBluetooth)
