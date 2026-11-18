@@ -75,22 +75,18 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *  BOARD-PAKET: "esp32" by Espressif Systems  (Boardverwalter, Min. Arduino-ESP32 3.x /
 *    ESP-IDF 5.1 fuer BLE-Adresse im MIDI-Modus).
 *    USB-Audio-Mikrofon UND Statusleitungen (DCD/DSR/Break, "PTT via Pin") benoetigen den
-*    Espressif-Core  3.3.13  oder neuer (Release angekuendigt, Stand 11/2026). Der Sketch
-*    nutzt dafuer nur die offiziellen Schnittstellen des Cores:
+*    Espressif-Core  3.3.13  oder neuer (Release vom 17.11.2026). Mit aelteren Staenden
+*    bricht die Uebersetzung mit einer Fehlermeldung ab. Der Sketch nutzt dafuer nur die
+*    offiziellen Schnittstellen des Cores:
 *     - USB-Audio-Mikrofon:  Klasse USBAudioCard samt korrigiertem UAC1-Descriptor (PR #13095).
-*       Ohne diese Klasse uebersetzt der Sketch trotzdem, der Bereich meldet "nicht vorhanden".
 *     - Statusleitungen:  USBCDC::notifyState() mit echtem Notification-Endpoint
 *       (tud_cdc_0_use_notify(), der Sketch ueberschreibt die schwache Funktion des Cores) und
-*       USBCDC::notifyStateIgnoreDtr() fuer "DTR ignorieren" (PR #13113, Issue #13102).
-*       Zusaetzlich muessen die vorkompilierten Bibliotheken CFG_TUD_CDC_NOTIFY=1 enthalten
-*       (bei 3.3.12 mit esp32-arduino-libs ...-56b130f5-v4 der Fall). Der Endpoint wird nur
-*       angelegt, wenn mindestens eine Statusleitung zugewiesen ist (kostet einen der vier
-*       nutzbaren IN-Endpoints des ESP32-S3).
+*       USBCDC::notifyStateIgnoreDtr() fuer "DTR ignorieren" (PR #13037 und #13113).
+*       Der Endpoint wird nur angelegt, wenn mindestens eine Statusleitung zugewiesen ist
+*       (kostet einen der vier nutzbaren IN-Endpoints des ESP32-S3).
 *       Die CAT-Textbefehle ("PTT via Serial Commands") funktionieren unabhaengig davon.
-*    Vor 3.3.13 ist ein Master-Stand von Arduino-ESP32 mit den beiden PRs noetig.
 *
-*  Zuletzt getestet mit:  Arduino-ESP32 3.3.12 (release/v3.3.x) plus PR #13113, Libs
-*    "esp32-arduino-libs-idf-release_v5.5-56b130f5-v4", Stand 11/2026.
+*  Zuletzt getestet mit:  Arduino-ESP32 3.3.13 (Boardverwalter), Stand 11/2026.
 *
 *  BIBLIOTHEKEN
 *   - Adafruit NeoPixel  (Bibliotheksverwalter; aktuell 1.15.5, Stand 11/2026)
@@ -98,14 +94,6 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *     USB / USBHIDKeyboard / USBMIDI / USBAudioCard, TinyUSB (tusb.h),
 *     BLE (BLEDevice, BLEServer, BLEHIDDevice, BLESecurity ...), WiFi, WebServer,
 *     ESPmDNS, Preferences (NVS), esp_sleep, esp_timer.
-*
-*  USB-AUDIO-HEADER (nur bei Core-Staenden vor 3.3.13 / vor dem 10.11.2026):
-*   Aeltere Cores melden das USB-Mikrofon unter Windows doppelt ("TinyUSB UAC1", Code 10), weil
-*   in den UAC1-Descriptoren der IAD (Interface Association Descriptor) fehlt (Korrektur: PR #13095).
-*   Bei aelteren Staenden die Datei  USBAudioCardDescriptors.h  mit dem Skript  patch_usbaudio_iad.py
-*   (siehe README_USB_Audio_Patch.md) anpassen:
-*     <Sketchbook>\hardware\espressif\esp32\libraries\USB\src\USBAudioCardDescriptors.h
-*   Danach den IDE-Build-Cache loeschen (siehe Abschnitt 5).
 *
 * ------------------------------------------------------------------------------
 *  4. ARDUINO-IDE-EINSTELLUNGEN   (Werkzeuge-Menue)
@@ -149,7 +137,7 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *  - Meldung "unlinkat ... .map: Der Prozess kann nicht auf die Datei zugreifen"
 *    beim Kompilieren ist ein kurzer Dateizugriffskonflikt (z.B. Virenscanner):
 *    einfach noch einmal kompilieren.
-*  - Audio-Mikrofon doppelt/fehlt in Windows: bei Core vor dem 10.11.2026 Header-Patch (Abschnitt 3) pruefen,
+*  - Audio-Mikrofon doppelt/fehlt in Windows: Core 3.3.13 oder neuer verwenden (Abschnitt 3),
 *    Build-Cache loeschen, ggf. altes Geraet im Geraete-Manager entfernen.
 *  - Diagnose: Im Webinterface zeigt der Bereich "USB-Serial & USB-Audio" den
 *    Zustand des Cores (Statusleitungen moeglich?), ob der COM-Port am PC geoeffnet ist,
@@ -167,6 +155,11 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *     Adresse  http://192.168.4.1
 *   - Mit Heimnetz (WLAN im Webinterface waehlen/eingeben): Adresse morse-s3.local
 *     oder die vom Router vergebene IP (steht im seriellen Monitor).
+*   - Signalstaerke (RSSI, Kanal, Access Point/BSSID) steht in der Box "WLAN-Verbindung" und
+*     wird alle 5 s aufgefrischt. Ab etwa -80 dBm wird die Seite zaeh. Bei mehreren Routern
+*     (Mesh) waehlt das Geraet beim Start den staerksten Access Point; per Auswahlliste mit
+*     Haken "Nur diese BSSID nutzen" kann ein bestimmter Access Point (BSSID) vorgegeben werden.
+*     Am Ende der Box steht die WLAN-Sendeleistung (Standard 19,5 dBm, max. 20 dBm; sofort wirksam).
 *   - Das WLAN schaltet sich nach dem "Web-Timeout" ab (Standard 0 = nie);
 *     der Tiefschlaf folgt nach dem "Sleep-Timeout" (Standard 0 = nie). Beides in Minuten
 *     einstellbar; Aufwecken aus dem Tiefschlaf per Paddle-Druck. (Die Standardwerte gelten
@@ -247,8 +240,8 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *      Nachlaufzeit) werden ueber die CDC-SerialState-Bits DCD, DSR bzw. Break an den PC
 *      gemeldet (USBCDC::notifyState). Die Zuordnung ist frei waehlbar. CTS ist ueber
 *      USB-CDC technisch nicht moeglich. Der PC-Software (Remote CW Keyer, SDR Console ...)
-*      muss DSR bzw. DCD als Eingang eingestellt werden. Voraussetzung: Core + Libs
-*      siehe Abschnitt 3; ausserdem sendet der Core nur bei gesetztem DTR (COM-Port am
+*      muss DSR bzw. DCD als Eingang eingestellt werden. Voraussetzung: Core 3.3.13
+*      (Abschnitt 3); ausserdem sendet der Core nur bei gesetztem DTR (COM-Port am
 *      PC geoeffnet) - ohne DTR kommen keine Meldungen an, ausser "DTR ignorieren" ist aktiv.
 *   b) CAT-Textbefehle ("PTT via Serial Commands"): Beim Senden-Beginn/-Ende werden
 *      frei einstellbare Texte (Standard "TX;" / "RX;") ueber den COM-Port gesendet;
@@ -281,9 +274,7 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 * ------------------------------------------------------------------------------
 *  8. BEKANNTE EINSCHRAENKUNGEN
 * ------------------------------------------------------------------------------
-*   - USB-Audio und "PTT via Pin" funktionieren erst mit dem Espressif-Core 3.3.13 (bzw. einem
-*     Master-Stand mit PR #13095 und #13113); die vorkompilierten Libs muessen
-*     CFG_TUD_CDC_NOTIFY=1 enthalten (siehe Abschnitt 3).
+*   - USB-Audio und "PTT via Pin" benoetigen den Espressif-Core 3.3.13 oder neuer (Abschnitt 3).
 *   - Die Statusleitungen belegen einen zusaetzlichen IN-Endpoint. Der ESP32-S3 hat nur wenige
 *     nutzbare IN-Endpoints (CDC-Daten, USB-Tastatur, USB-MIDI, USB-Audio): Sind alle Funktionen
 *     gleichzeitig aktiv, ist die Belegung knapp; dieser Grenzfall ist nicht abschliessend getestet.
@@ -295,6 +286,11 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 #include "USB.h"
 #include "USBHIDKeyboard.h"
 #include "USBMIDI.h"
+#if defined(ESP_ARDUINO_VERSION) && defined(ESP_ARDUINO_VERSION_VAL)
+  #if ESP_ARDUINO_VERSION < ESP_ARDUINO_VERSION_VAL(3, 3, 13)
+    #error "Dieser Sketch braucht den Espressif-Core 3.3.13 oder neuer (USB-Audio und Statusleitungen). Bitte im Boardverwalter aktualisieren. / This sketch needs the Espressif core 3.3.13 or newer."
+  #endif
+#endif
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
@@ -306,6 +302,7 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 #include <esp_idf_version.h>
 #include <Adafruit_NeoPixel.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
 #include <Preferences.h>
@@ -365,6 +362,11 @@ uint32_t colorDash = 0x00FF00;
 String ssidHome = "";
 String passHome = "";
 String scanResultsHtml = "";
+String bssidFix = "";                      // gewaehlter Access Point (BSSID "AA:BB:CC:DD:EE:FF"), z.B. bestimmte Mesh-Box
+bool bssidLock = false;                    // true = nur mit diesem Access Point verbinden ("Nur diese BSSID nutzen")
+struct ScanAp { char bssid[18]; int rssi; int channel; };
+ScanAp scanAps[12];                        // beim Scan gefundene Access Points des Heimnetzes (Mesh: mehrere Boxen, gleiche SSID)
+int scanApCount = 0;
 int resetReasonCode = -1;                 // Grund des letzten Neustarts (esp_reset_reason), Diagnose
 String wifiScanInfo = "";             // Ergebnis des letzten Scans fuer das gespeicherte Heimnetz
 volatile int lastWifiReason = 0;      // letzter Abbruchgrund der WLAN-Verbindung (wifi_err_reason_t), 0 = keiner
@@ -386,64 +388,14 @@ USBMIDI* usbMidi = NULL;               // wird nur bei Aktivierung angelegt (sie
 // ---- USB-Serial-Modus: Statusleitungen DCD / DSR / Break (Geraet -> PC) ----
 // Der virtuelle COM-Port kann dem PC ueber eine "Serial State"-Meldung mitteilen, ob DCD, DSR
 // bzw. Break aktiv sind (Software wie "Remote CW Keyer" oder SDR Console liest diese Leitungen).
-// Dafuer braucht es USBCDC::notifyState() (Arduino-ESP32 PR #13037, bei Erstellung dieses
-// Sketches noch nicht in einem Release) UND vorkompilierte Bibliotheken mit CFG_TUD_CDC_NOTIFY.
-// Damit der Sketch auch mit aelteren Cores uebersetzt, wird das Vorhandensein der Methode zur
-// Compile-Zeit erkannt: Fehlt sie, bleibt der Bereich im Webinterface ohne Wirkung und meldet das.
-// (Als Struktur statt als Funktion geschrieben, damit die Arduino-IDE daraus keine fehlerhaften
-// Funktionsprototypen erzeugt.)
-template <typename T, typename = void>
-struct CdcNotifyApi {
-  static constexpr bool available = false;
-  static bool send(T&, bool, bool, bool) { return false; }
-};
-template <typename T>
-struct CdcNotifyApi<T, std::void_t<decltype(std::declval<T&>().notifyState(false, false, false))>> {
-  static constexpr bool available = true;
-  static bool send(T& port, bool dcd, bool dsr, bool brk) { return port.notifyState(dcd, dsr, brk); }
-};
-typedef CdcNotifyApi<USBCDC> CdcNotify;
-// Optionale Core-Schalter (offizielle Schnittstelle, arduino-esp32 PR #13113):
+// Dafuer nutzt der Sketch die offiziellen Schnittstellen des Espressif-Cores (ab 3.3.13):
+//  - USBSerial.notifyState(dcd, dsr, brk)           (PR #13037)
+//  - USBSerial.notifyStateIgnoreDtr(bool)           (PR #13113): Meldungen auch ohne gesetztes DTR
 //  - tud_cdc_0_use_notify(): wird vom Core beim Aufbau des USB-Descriptors gefragt; true = echter
-//    Notification-Endpoint statt fest 0x85 (siehe unten, Wert aus g_cdcNotifyEp)
-//  - USBSerial.notifyStateIgnoreDtr(bool): notifyState() auch ohne DTR
-// Fehlt notifyStateIgnoreDtr() (Core ohne PR), uebersetzt der Sketch trotzdem und nutzt den Direktweg.
+//    Notification-Endpoint statt des festen Endpoints 0x85 (ohne FIFO, Meldungen kommen dann nicht an).
+//    Der Wert steht in g_cdcNotifyEp (siehe UsbEarlyInit und die Funktion weiter unten).
 static bool g_cdcNotifyEp = false;
-template <typename T, typename = void>
-struct CdcNotifyOpt {
-  static constexpr bool available = false;
-  static void endpoint(T&, bool on) { g_cdcNotifyEp = on; }
-  static void ignoreDtr(T&, bool) {}
-};
-template <typename T>
-struct CdcNotifyOpt<T, std::void_t<decltype(std::declval<T&>().notifyStateIgnoreDtr(false))>> {
-  static constexpr bool available = true;
-  static void endpoint(T&, bool on) { g_cdcNotifyEp = on; }
-  static void ignoreDtr(T& port, bool on) { port.notifyStateIgnoreDtr(on); }
-};
-typedef CdcNotifyOpt<USBCDC> CdcOpt;
 String cdcNotifyEndpointText();   // Vorwaertsdeklaration (Definition weiter unten, benutzt vom Webinterface)
-// Wert des TinyUSB-Schalters, mit dem die Core-Bibliotheken gebaut wurden (nur zur Anzeige, steuert nichts)
-#if defined(CFG_TUD_CDC_NOTIFY)
-  #if CFG_TUD_CDC_NOTIFY
-    static const char* const CDC_NOTIFY_LIB = "1";
-  #else
-    static const char* const CDC_NOTIFY_LIB = "0";
-  #endif
-#else
-  static const char* const CDC_NOTIFY_LIB = "unbekannt";
-#endif
-// Direktweg ohne DTR-Pruefung des Cores: Ist TinyUSB mit CFG_TUD_CDC_NOTIFY=1 gebaut (steht dann in den
-// Core-Bibliotheken), kann der Sketch die Serial-State-Meldung selbst ueber tud_cdc_n_notify_uart_state()
-// senden. Der Arduino-Core sendet sonst nur bei gesetztem DTR; Programme wie die SDR Console setzen DTR nicht.
-// Aktiv, wenn "DTR ignorieren" eingeschaltet und der Port ohne DTR geoeffnet ist. (Noch ungetestet:
-// ob Windows die Bits ohne DTR an die Anwendung weitergibt.)
-#if defined(CFG_TUD_CDC_NOTIFY) && CFG_TUD_CDC_NOTIFY
-  static constexpr bool NOTIFY_DIRECT = true;
-#else
-  static constexpr bool NOTIFY_DIRECT = false;
-#endif
-static constexpr bool NOTIFY_ANY = CdcNotify::available || NOTIFY_DIRECT;
 // Belegung: 0 = aus, 1 = DCD, 2 = DSR, 3 = Break (Break ist ein Ereignis, kein Dauerpegel - nicht empfohlen)
 bool serialDebug = true;                   // Diagnose-Ausgaben im seriellen Monitor (schliesst USB-Serial aus: gleicher COM-Port)
 #define DBG(...) do { if (serialDebug) Serial.printf(__VA_ARGS__); } while (0)
@@ -464,12 +416,12 @@ volatile bool serRtsRaw = false;
 volatile uint32_t serLineEvents = 0;       // Diagnose: Anzahl der empfangenen Line-State-Ereignisse
 volatile uint32_t serNotifyOk = 0;         // Diagnose: notifyState() erfolgreich / fehlgeschlagen
 volatile uint32_t serNotifyFail = 0;
-volatile uint32_t serNotifyDirect = 0;     // davon ueber den Direktweg (ohne DTR) gesendet
 // ---- Piezo-Mithoerton (sofort, ohne Lead time; Frequenz wie der USB-Audio-Ton) ----
 bool piezoEnabled = false;
 int piezoVolumePct = 50;                   // 1 - 100 %
 int piezoPin = 7;                          // GPIO des Piezos (Plus-Anschluss, Minus an GND)
 int uiLang = 0;                            // Weboberflaeche: 0 = Deutsch, 1 = English
+int wifiTxQdbm = 78;                       // WLAN-Sendeleistung in 1/4 dBm (78 = 19,5 dBm = Standard des Cores; 80 = 20 dBm = Maximum des Chips)
 int serMapKey = 0;                         // Keyer-Taste (verzoegert) -> Leitung, 0 = aus
 String serTxCmd = "TX;";                   // PTT via serielle Befehle: Text beim Senden-Beginn
 String serRxCmd = "RX;";                   // ... und beim Senden-Ende (leer = nichts senden)
@@ -527,8 +479,8 @@ struct UsbEarlyInit {
     }
     // Statusleitungen gewuenscht (irgendeine Belegung != aus): echten Notification-Endpoint fuer die serielle
     // Schnittstelle anfordern. Das muss HIER passieren, denn die USB-Deskriptoren entstehen schon vor setup().
-    // Kostet einen IN-Endpoint (auf dem S3 gibt es nur 4). Nur mit gepatchtem Core, sonst ohne Wirkung.
-    if (mDot != 0 || mDash != 0 || mPtt != 0 || mKey != 0) CdcOpt::endpoint(USBSerial, true);
+    // Kostet einen IN-Endpoint (auf dem S3 gibt es nur 4).
+    if (mDot != 0 || mDash != 0 || mPtt != 0 || mKey != 0) g_cdcNotifyEp = true;
     if (kbd) usbKeyboard = new USBHIDKeyboard();
     if (midi) usbMidi = new USBMIDI();
 #if MORSE_HAS_AUDIO
@@ -822,6 +774,9 @@ piezoEnabled = prefs.getBool("pz_en", false);
 piezoVolumePct = constrain(prefs.getInt("pz_vol", 50), 1, 100);
 piezoPin = prefs.getInt("pz_pin", 7);
 uiLang = constrain(prefs.getInt("lang", 0), 0, 1);
+wifiTxQdbm = constrain(prefs.getInt("wtxp", 78), 8, 80);
+bssidFix = prefs.getString("bssid_fx", "");
+bssidLock = prefs.getBool("bssid_lk", false);
 serMapKey = constrain(prefs.getInt("ser_key", 0), 0, 3);
 serTxCmd = prefs.getString("ser_tx", "TX;");
 serRxCmd = prefs.getString("ser_rx", "RX;");
@@ -874,6 +829,9 @@ prefs.putBool("pz_en", piezoEnabled);
 prefs.putInt("pz_vol", piezoVolumePct);
 prefs.putInt("pz_pin", piezoPin);
 prefs.putInt("lang", uiLang);
+prefs.putInt("wtxp", wifiTxQdbm);
+prefs.putString("bssid_fx", bssidFix);
+prefs.putBool("bssid_lk", bssidLock);
 prefs.putInt("ser_key", serMapKey);
 prefs.putString("ser_tx", serTxCmd);
 prefs.putString("ser_rx", serRxCmd);
@@ -927,6 +885,7 @@ String wifiReasonText() {
 
 void scanNetworks() {
 int n = WiFi.scanNetworks();
+scanApCount = 0;
 scanResultsHtml = "<select name='ssid_h'>";
 scanResultsHtml += "<option value=''>-- Bitte waehlen --</option>";
 String seenSsids = "|";
@@ -934,6 +893,14 @@ wifiScanInfo = "im Scan <b>nicht</b> gefunden";
 for (int i = 0; i < n; ++i) {
 String currentSSID = WiFi.SSID(i);
 if (currentSSID.length() == 0) continue;
+if (currentSSID == ssidHome && scanApCount < 12) {   // jeder Access Point mit dem Heimnetz-Namen (vor dem Entfernen doppelter Namen)
+  String b = WiFi.BSSIDstr(i);
+  b.toUpperCase();
+  strlcpy(scanAps[scanApCount].bssid, b.c_str(), sizeof(scanAps[scanApCount].bssid));
+  scanAps[scanApCount].rssi = WiFi.RSSI(i);
+  scanAps[scanApCount].channel = WiFi.channel(i);
+  scanApCount++;
+}
 if (seenSsids.indexOf("|" + currentSSID + "|") != -1) continue;
 seenSsids += currentSSID + "|";
 String selected = (currentSSID == ssidHome) ? " selected" : "";
@@ -1026,10 +993,8 @@ bool piezoPinAllowed(int p) {
 // (laengste Eintraege zuerst). Nicht uebersetzte Texte bleiben einfach deutsch.
 struct TrPair { const char* de; const char* en; };
 static const TrPair TR_TABLE[] = {
-  {"nur deklariert, aber ohne Funktion (Core-Bibliotheken ohne CFG_TUD_CDC_NOTIFY)", "declared only, without function (core libraries without CFG_TUD_CDC_NOTIFY)"},
   {"vorhanden, aber das Senden schl&auml;gt fehl", "available, but sending fails"},
   {"USB bereit", "USB ready"},
-  {"Core-Schalter (Patch) vorhanden", "Core switches (patch) present"},
   {"CDC-Notification-Endpoint", "CDC notification endpoint"},
   {"Sichert alle Einstellungen in einer lesbaren Textdatei und liest sie wieder ein. Beim Laden werden die Werte nur in die Seite &uuml;bernommen &ndash; dauerhaft gespeichert wird erst mit &bdquo;Einstellungen speichern&ldquo;. Fehlende Eintr&auml;ge in der Datei &auml;ndern nichts.", "Saves all settings to a readable text file and reads them back in. When loading, the values are only transferred into the page &ndash; they are stored permanently only with &ldquo;Save settings&rdquo;. Missing entries in the file change nothing."},
   {"Beide Kn&ouml;pfe &ouml;ffnen zuerst ein kleines Fenster (beim Speichern: Dateiname; au&szlig;erdem WLAN-Zugangsdaten ja/nein und Datei-Passwort) und dann die Dateiauswahl des Browsers. Chrome/Edge k&ouml;nnen f&uuml;r Speichern und Laden denselben letzten Ordner merken, sofern die Seite eine &bdquo;sichere&ldquo; Adresse hat (siehe Anleitung im Sketch-Kopf). Sonst (z.&nbsp;B. Firefox) landet die Datei im Download-Ordner des Browsers, den Namen bestimmt das Feld im Fenster.",
@@ -1077,7 +1042,6 @@ static const TrPair TR_TABLE[] = {
   {"Der ESP32 meldet sich als virtueller COM-Port (Statusleitungen und PTT-Befehle) und optional als USB-Mikrofon mit CW-Ton. Alles au&szlig;er dem Ein/Aus des Mikrofons wirkt sofort.", "The ESP32 appears as a virtual COM port (status lines and PTT commands) and optionally as a USB microphone with CW tone. Everything except the microphone on/off takes effect immediately."},
   {"Gilt nur f&uuml;r die Verbindung per USB-Kabel &ndash; unabh&auml;ngig vom Bluetooth-Modus. Ein-/Ausschalten braucht einen Neustart, die Tastenwahl wirkt sofort.", "Applies to the USB cable connection only &ndash; independent of the Bluetooth mode. Switching on/off needs a restart, the key selection takes effect immediately."},
   {"Ger&auml;t nicht erreichbar. Nach einer WLAN-&Auml;nderung hat sich evtl. die Adresse ge&auml;ndert.", "Device not reachable. After a WLAN change the address may have changed."},
-  {"Gesperrt: der installierte Arduino-Core kann die Statusleitungen noch nicht setzen ", "Locked: the installed Arduino core cannot set the status lines yet "},
   {"Wird pro Verbindung mit dem ersten Ton gesendet. Nicht jede App reagiert darauf.", "Sent once per connection with the first note. Not every app reacts to it."},
   {"USB-Tastatur-Einstellung gespeichert. Das Ger&auml;t startet neu ...", "USB keyboard setting saved. The device is restarting ..."},
   {"Bluetooth-Einstellungen gespeichert. Das Ger&auml;t startet neu ...", "Bluetooth settings saved. The device is restarting ..."},
@@ -1087,7 +1051,6 @@ static const TrPair TR_TABLE[] = {
   {"USB-MIDI-Einstellung gespeichert. Das Ger&auml;t startet neu ...", "USB MIDI setting saved. The device is restarting ..."},
   {"WLAN-Einstellungen gespeichert. Das Ger&auml;t startet neu ...", "WLAN settings saved. The device is restarting ..."},
   {"Speichern (Neustart nur bei &Auml;nderung des Mikrofons)", "Save (restart only when the microphone setting changes)"},
-  {"Sobald der Core das kann, wird die Auswahl freigegeben.", "As soon as the core can do this, the selection is enabled."},
   {"USB-Serial aktivieren (Leitungen, Commands und PTT)", "Enable USB serial (lines, commands and PTT)"},
   {"Bluetooth Midi-Noten und Bluetooth Tasten speichern", "Save Bluetooth MIDI notes and Bluetooth keys"},
   {"Nur im Modus BLE-MIDI: Noten &amp; Lautst&auml;rke", "BLE MIDI mode only: notes &amp; volume"},
@@ -1115,7 +1078,7 @@ static const TrPair TR_TABLE[] = {
   {"Farnsworth: Die Zeichen werden mit dem Zeichentempo (Standard 18 WPM) gegeben, die Pausen zwischen den Zeichen so gedehnt, dass sich das oben eingestellte Tempo als Gesamttempo ergibt (Standardformel f&uuml;r das Wort PARIS). &Auml;ndert man das Tempo, wird die Dehnung automatisch neu berechnet. Der Keyer startet das n&auml;chste Zeichen nicht vor Ablauf des gedehnten Zeichenabstands. Ist das Tempo gleich oder h&ouml;her als das Zeichentempo, passiert nichts.", "Farnsworth: characters are sent at the character speed (standard 18 WPM); the gaps between characters are stretched so that the speed set above becomes the overall speed (standard formula for the word PARIS). When the speed is changed, the stretching is recalculated automatically. The keyer does not start the next character before the stretched character gap has elapsed. If the speed is equal to or higher than the character speed, nothing changes."},
   {"Sendepuffer belegt:", "TX buffer used:"},
   {"DTR ignorieren (Befehle und Statusleitungen auch senden, wenn der Port ohne DTR ge&ouml;ffnet ist)", "Ignore DTR (send commands and status lines even if the port is opened without DTR)"},
-  {"Programme, die DTR nicht setzen (z.B. die SDR Console), brauchen &bdquo;DTR ignorieren&ldquo;; ist es abgeschaltet, wird nur bei gesetztem DTR gesendet. Die Statusleitungen gehen ohne DTR nur, wenn die Core-Bibliotheken CFG_TUD_CDC_NOTIFY=1 enthalten.", "Programs that do not set DTR (e.g. SDR Console) need &ldquo;Ignore DTR&rdquo;; if it is off, data is only sent while DTR is set. Without DTR the status lines are only sent if the core libraries contain CFG_TUD_CDC_NOTIFY=1."},
+  {"Programme, die DTR nicht setzen (z.B. die SDR Console), brauchen &bdquo;DTR ignorieren&ldquo;; ist es abgeschaltet, wird nur bei gesetztem DTR gesendet.", "Programs that do not set DTR (e.g. SDR Console) need &ldquo;Ignore DTR&rdquo;; if it is off, data is only sent while DTR is set."},
   {"Mikrofon am PC ge&ouml;ffnet:", "Microphone opened on PC:"},
   {"Sonderzeichen (mit Umschalt)", "Special characters (with Shift)"},
   {"Taste Linkes Paddle (Punkt):", "Key left paddle (dot):"},
@@ -1444,6 +1407,63 @@ f.addEventListener('submit',function(){if(b)b.classList.remove('dirty');});
 )HTML");
 }
 
+// ---- WLAN: Sendeleistung und Signalstaerke ----
+void applyWifiTxPower() {
+  esp_wifi_set_max_tx_power((int8_t)wifiTxQdbm);
+  int8_t actual = 0;
+  esp_wifi_get_max_tx_power(&actual);
+  DBG("WLAN-Sendeleistung: angefordert %.1f dBm, aktiv %.1f dBm, RSSI %d dBm\n", wifiTxQdbm * 0.25f, actual * 0.25f, WiFi.status() == WL_CONNECTED ? (int)WiFi.RSSI() : 0);
+}
+// Empfangsstaerke des Heimnetzes mit Bewertung, Kanal und Access Point (BSSID; im Mesh erkennt man daran die Box)
+bool parseBssid(const String& str, uint8_t* out) {
+  unsigned v[6];
+  if (str.length() != 17 || sscanf(str.c_str(), "%x:%x:%x:%x:%x:%x", &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]) != 6) return false;
+  for (int i = 0; i < 6; i++) out[i] = (uint8_t)v[i];
+  return true;
+}
+String wifiSignalText() {
+  bool en = (uiLang == 1);
+  if (WiFi.status() != WL_CONNECTED) return en ? "not connected" : "nicht verbunden";
+  int r = WiFi.RSSI();
+  const char* q = r >= -60 ? (en ? "very good" : "sehr gut") : r >= -70 ? (en ? "good" : "gut") : r >= -80 ? (en ? "weak" : "schwach") : (en ? "very weak" : "sehr schwach");
+  return String(r) + " dBm (" + q + "), " + (en ? "channel " : "Kanal ") + WiFi.channel() + ", " + (en ? "access point " : "Access Point ") + WiFi.BSSIDstr() + (bssidLock ? (en ? " [this BSSID only]" : " [nur diese BSSID]") : "");
+}
+// Auswahl des Access Points (aus dem Scan) mit Haken "Nur diese BSSID nutzen"; vorgewaehlt ist der gespeicherte bzw. aktuell verbundene
+String buildBssidHtml() {
+  bool en = (uiLang == 1);
+  String cur = (WiFi.status() == WL_CONNECTED) ? WiFi.BSSIDstr() : String("");
+  cur.toUpperCase();
+  String sel = bssidFix.length() > 0 ? bssidFix : cur;
+  String w = String("<div>") + (en ? "Access point (BSSID), e.g. which mesh box:" : "Access Point (BSSID), z.B. welche Mesh-Box:") + "<br><select name='bssid_sel'>";
+  bool found = false;
+  for (int i = 0; i < scanApCount; i++) {
+    String b = scanAps[i].bssid;
+    bool isSel = (b == sel);
+    if (isSel) found = true;
+    w += String("<option value='") + b + "'" + (isSel ? " selected" : "") + ">" + b + " | " + scanAps[i].rssi + " dBm | " + (en ? "channel " : "Kanal ") + scanAps[i].channel + (b == cur ? (en ? " (connected)" : " (verbunden)") : "") + "</option>";
+  }
+  if (!found && sel.length() > 0) w += String("<option value='") + sel + "' selected>" + sel + (en ? " (not in scan)" : " (nicht im Scan)") + "</option>";
+  if (scanApCount == 0 && sel.length() == 0) w += "<option value=''>-</option>";
+  w += String("</select></div><div class='row' style='margin:6px 0 10px 0;'><input type='checkbox' name='bssid_lock' id='bssid_lock' style='width:auto;margin-right:10px;'") + (bssidLock ? " checked" : "") +
+       "><label for='bssid_lock'>" + (en ? "Use this BSSID only" : "Nur diese BSSID nutzen") + "</label></div>";
+  w += String("<p class='hint'>") + (en ? "Without the tick the adapter picks the strongest access point of your network at start. With the tick it only connects to the selected one (restart; if that box is off, the adapter opens its hotspot). The list comes from the last scan (&quot;Rescan WLAN&quot;)."
+                                          : "Ohne Haken w&auml;hlt der Adapter beim Start den st&auml;rksten Access Point deines Netzes. Mit Haken verbindet er sich nur mit dem gew&auml;hlten (Neustart; ist diese Box aus, &ouml;ffnet der Adapter seinen Hotspot). Die Liste stammt vom letzten Scan (&bdquo;WLAN neu scannen&ldquo;).") + "</p>";
+  return w;
+}
+String buildTxPowerHtml() {
+  static const int   TXP_Q[] = {80, 78, 76, 68, 60, 52, 44, 34, 28, 20, 8};
+  static const char* TXP_T[] = {"20 (max.)", "19,5 (Standard)", "19", "17", "15", "13", "11", "8,5", "7", "5", "2"};
+  bool en = (uiLang == 1);
+  String w = String("<div>") + (en ? "WiFi transmit power (dBm):" : "WLAN-Sendeleistung (dBm):") + "<br><select name='wtxp'>";
+  for (size_t i = 0; i < sizeof(TXP_Q) / sizeof(TXP_Q[0]); i++) {
+    String t = TXP_T[i];
+    if (en) t.replace(",", ".");
+    w += String("<option value='") + TXP_Q[i] + "'" + (wifiTxQdbm == TXP_Q[i] ? " selected" : "") + ">" + t + "</option>";
+  }
+  w += "</select></div>";
+  return w;
+}
+
 void handleRoot() {
   lastWebActivityTime = millis();
   sendTCount = 0;
@@ -1518,11 +1538,7 @@ void handleRoot() {
     "<p class='hint'>Der ESP32 meldet sich als virtueller COM-Port (Statusleitungen und PTT-Befehle) und optional als "
     "USB-Mikrofon mit CW-Ton. Alles au&szlig;er dem Ein/Aus des Mikrofons wirkt sofort.</p>");
   sendT(String("<p class='hint'>Arduino-Core: Statusleitungen <b>") +
-                     (!NOTIFY_ANY ? "NICHT vorhanden"
-                      : (!NOTIFY_DIRECT && String(CDC_NOTIFY_LIB) == "0") ? "nur deklariert, aber ohne Funktion (Core-Bibliotheken ohne CFG_TUD_CDC_NOTIFY)"
-                      : (serNotifyOk == 0 && serNotifyFail > 0) ? "vorhanden, aber das Senden schl&auml;gt fehl"
-                      : "vorhanden") +
-                     " (CFG_TUD_CDC_NOTIFY=" + String(CDC_NOTIFY_LIB) + ")" +
+                     ((serNotifyOk == 0 && serNotifyFail > 0) ? "vorhanden, aber das Senden schl&auml;gt fehl" : "vorhanden") +
                      "</b>, USB-Audio <b>" + (MORSE_HAS_AUDIO ? "vorhanden" : "NICHT vorhanden") +
                      "</b><br>COM-Port am PC ge&ouml;ffnet: <b>" + (serPortOpen ? "ja" : "nein") +
                      "</b>, Sendepuffer belegt: <b>" + String((int)serTxPending) + "</b> Byte, Mikrofon am PC ge&ouml;ffnet: <b>" + (audioStreaming ? "ja" : "nein") +
@@ -1532,13 +1548,12 @@ void handleRoot() {
                      "</b> RTS <b>" + ((tud_cdc_n_get_line_state(0) & 2) ? 1 : 0) + "</b><b>" +
                      "</b><br>Zuletzt gemeldet: DCD=<b>" + (serSentDcd ? 1 : 0) + "</b> DSR=<b>" + (serSentDsr ? 1 : 0) +
                      "</b> Break=<b>" + (serSentBrk ? 1 : 0) +
-                     "</b>, Meldungen: ok <b>" + String((unsigned long)serNotifyOk) + "</b> (davon ohne DTR <b>" + String((unsigned long)serNotifyDirect) + "</b>), fehlgeschlagen <b>" + String((unsigned long)serNotifyFail) +
+                     "</b>, Meldungen: ok <b>" + String((unsigned long)serNotifyOk) + "</b>, fehlgeschlagen <b>" + String((unsigned long)serNotifyFail) +
                      "</b><br>Diagnose: Keyer-Takt <b>" + String((unsigned long)keyerTicks) + "</b>, Audio-Pakete <b>" +
                      String((unsigned long)audioFramesSent) + "</b>, Paddles (Dit/Dah) <b>" + (paddleDot ? 1 : 0) + "/" + (paddleDash ? 1 : 0) +
                      "</b>, Ton-Taste <b>" + (audioKeyed ? 1 : 0) +
                      "</b>, USB bereit <b>" + (tud_ready() ? "ja" : "nein") +
-                     "</b><br>Core-Schalter (Patch) vorhanden: <b>" + (CdcOpt::available ? "ja" : "nein") +
-                     "</b>, CDC-Notification-Endpoint: <b>" + cdcNotifyEndpointText() +
+                     "</b><br>CDC-Notification-Endpoint: <b>" + cdcNotifyEndpointText() +
                      "</b><br>PTT-Befehle: gesendet <b>" + String((unsigned long)serCmdSent) + "</b>, verworfen <b>" + String((unsigned long)serCmdDropped) + "</b></p>");
 
   // -- Keyer (Modus, Tempo, Ton) --
@@ -1605,21 +1620,17 @@ void handleRoot() {
     "<div class='row'><input type='checkbox' name='ser_nodtr' style='width:auto;margin-right:10px;' " + String(serIgnoreDtr ? "checked" : "") + "><label>DTR ignorieren (Befehle und Statusleitungen auch senden, wenn der Port ohne DTR ge&ouml;ffnet ist)</label></div>"
     "<p class='hint'>Die Befehle werden als Text &uuml;ber den COM-Port gesendet (z.B. <code>TX;</code> / <code>RX;</code>; "
     "<code>\\r</code> und <code>\\n</code> stehen f&uuml;r Zeilenende). Leer = nichts senden. Eine Baudrate gibt es bei "
-    "USB nicht, im Terminalprogramm ist jeder Wert in Ordnung. Voraussetzung: USB-Serial ist aktiviert und der COM-Port am PC ge&ouml;ffnet. Programme, die DTR nicht setzen (z.B. die SDR Console), brauchen &bdquo;DTR ignorieren&ldquo;; ist es abgeschaltet, wird nur bei gesetztem DTR gesendet. Die Statusleitungen gehen ohne DTR nur, wenn die Core-Bibliotheken CFG_TUD_CDC_NOTIFY=1 enthalten.</p>");
+    "USB nicht, im Terminalprogramm ist jeder Wert in Ordnung. Voraussetzung: USB-Serial ist aktiviert und der COM-Port am PC ge&ouml;ffnet. Programme, die DTR nicht setzen (z.B. die SDR Console), brauchen &bdquo;DTR ignorieren&ldquo;; ist es abgeschaltet, wird nur bei gesetztem DTR gesendet.</p>");
 
   // -- PTT via Pin --
   sendT("<h4 style='color:#ffdd57;margin-bottom:6px;'>PTT via Pin</h4>");
   {
     const char* names[4] = {"Aus", "DCD", "DSR", "Break"};
-    String sel = String("<div>PTT &rarr;<br><select name='ser_ptt'") + (NOTIFY_ANY ? "" : " disabled") + ">";
+    String sel = String("<div>PTT &rarr;<br><select name='ser_ptt'") + ">";
     for (int i = 0; i < 4; i++) {
       sel += String("<option value='") + i + "'" + (i == serMapPtt ? " selected" : "") + ">" + names[i] + "</option>";
     }
     sel += "</select></div>";
-    if (!NOTIFY_ANY) {
-      sel += "<p class='hint'>Gesperrt: der installierte Arduino-Core kann die Statusleitungen noch nicht setzen "
-             "(<code>USBCDC::notifyState()</code>, PR #13037). Sobald der Core das kann, wird die Auswahl freigegeben.</p>";
-    }
     sendT(sel);
   }
   // -- PTT Timings (gelten fuer beide PTT-Methoden) --
@@ -1685,7 +1696,7 @@ upd();
   if (uiLang == 1) scan.replace("-- Bitte waehlen --", "-- Please select --");
   {
     String wst;
-    if (WiFi.status() == WL_CONNECTED) wst = "Verbunden mit <b>" + htmlAttr(WiFi.SSID()) + "</b>, IP <b>" + WiFi.localIP().toString() + "</b>";
+    if (WiFi.status() == WL_CONNECTED) wst = "Verbunden mit <b>" + htmlAttr(WiFi.SSID()) + "</b>, IP <b>" + WiFi.localIP().toString() + "</b>, Signal: <b><span id='rssi'>" + wifiSignalText() + "</span></b>";
     else if (ssidHome.length() == 0) wst = "Kein Heimnetz eingetragen &ndash; der ESP32 spannt sein eigenes Netz auf.";
     else wst = "<b>Nicht verbunden</b> mit &bdquo;" + htmlAttr(ssidHome) + "&ldquo;. Grund: " + wifiReasonText() + " (WLAN-Status " + String((int)WiFi.status()) + "; " + wifiScanInfo + ")";
     sendT("<div class='card'>"
@@ -1701,12 +1712,18 @@ upd();
         "<div>Passwort:<br><input type='password' name='pass_h' value='");
   // Passwort HTML-sicher, nie leer senden: sendContent("") beendet die chunked-Antwort -> Rest der Seite (u.a. der Speichern-Knopf) fehlte
   if (passHome.length() > 0) server.sendContent(htmlAttr(passHome));
-  sendT("'></div>"
+  sendT(String("'></div>") + buildBssidHtml() + buildTxPowerHtml() +
         "<p class='hint'>Im Heimnetz ist das Ger&auml;t au&szlig;erdem unter dem Namen <b>morse-s3</b> bzw. <b>morse-s3.local</b> erreichbar. Wird ein Netz gew&auml;hlt, aber keine Verbindung hergestellt, startet das Ger&auml;t beim Speichern neu und versucht es erneut.</p></div>\n"
         "<div class='card savebar'><input type='submit' class='btn btn-orange' value='Einstellungen speichern'>"
         "<p class='hint' style='margin:8px 0 0 0;'>&Auml;nderungen ohne Neustart wirken sofort, sind aber erst nach dem Speichern dauerhaft &ndash; der Knopf blinkt, solange noch nicht gespeichert wurde. "
         "Ein Neustart erfolgt nur, wenn er n&ouml;tig ist (WLAN, USB-Tastatur, USB-MIDI, USB-Audio, Bluetooth-Betriebsart).</p></div></form>");
   sendSelectData();
+  // Signalstaerke alle 5 s auffrischen (kleine Textantwort)
+  sendT(R"HTML(<script>
+function rssiUpd(){fetch('/rssi').then(function(r){return r.text();}).then(function(t){var e=document.getElementById('rssi');if(e)e.textContent=t;}).catch(function(){});}
+setInterval(rssiUpd,5000);
+</script>
+)HTML");
 
   // ---- Einstellungen sichern / laden ----
   // Die Datei entsteht und wird gelesen im Browser (liest/befuellt die Formularfelder per Namen). Beim Laden werden die Werte nur in die
@@ -1736,7 +1753,7 @@ upd();
   sendT(R"HTML(<script>
 (function(){
 var f=document.querySelector("form[action='/save_all']");if(!f)return;
-var SK={ssid_h:1,ssid_manual:1,pass_h:1};
+var SK={ssid_h:1,ssid_manual:1,pass_h:1,bssid_sel:1,bssid_lock:1};
 function g(i){return document.getElementById(i);}
 function say(t){g('fx_msg').innerHTML=t;}
 function two(n){return(n<10?'0':'')+n;}
@@ -1918,6 +1935,12 @@ void applyWebArgs(bool live, String& why) {
   if (server.hasArg("usbmidi_dot")) usbMidiNoteDot = constrain((int)server.arg("usbmidi_dot").toInt(), 0, 127);
   if (server.hasArg("usbmidi_dash")) usbMidiNoteDash = constrain((int)server.arg("usbmidi_dash").toInt(), 0, 127);
 
+  // WLAN-Sendeleistung (wirkt sofort, kein Neustart)
+  if (server.hasArg("wtxp")) {
+    int q = constrain((int)server.arg("wtxp").toInt(), 8, 80);
+    if (q != wifiTxQdbm) { wifiTxQdbm = q; applyWifiTxPower(); }
+  }
+
   // Keyer, Piezo, USB-Audio, USB-Serial, PTT
   serialDebug = server.hasArg("dbg_en");
   usbSerialEnabled = server.hasArg("usbser_en") && !serialDebug;   // beide teilen sich den COM-Port: nur eines von beiden
@@ -1971,8 +1994,19 @@ void applyWebArgs(bool live, String& why) {
   // Netz ausdruecklich gewaehlt/eingegeben, aber (noch) nicht verbunden: auch ohne Aenderung neu starten = neuer Verbindungsversuch
   bool retry = !wlanChanged && newSsid.length() > 0 && WiFi.status() != WL_CONNECTED &&
                (manualSsid.length() > 0 || (server.hasArg("ssid_h") && server.arg("ssid_h").length() > 0));
+  // Nur diese BSSID nutzen; bei einem anderen Netz wird die Sperre nicht uebernommen
+  String newBssid = bssidFix;
+  if (server.hasArg("bssid_sel")) {
+    String b = server.arg("bssid_sel");
+    b.trim(); b.toUpperCase();
+    uint8_t tmp[6];
+    newBssid = parseBssid(b, tmp) ? b : String("");
+  }
+  bool newLock = server.hasArg("bssid_lock") && newBssid.length() > 0 && newSsid == ssidHome;
+  bool bssidChanged = (newLock != bssidLock) || (newLock && newBssid != bssidFix);
+  bssidFix = newBssid; bssidLock = newLock;
   ssidHome = newSsid; passHome = newPass;
-  if (wlanChanged || retry) needRestart(uiLang == 1 ? "WiFi" : "WLAN");
+  if (wlanChanged || retry || bssidChanged) needRestart(uiLang == 1 ? "WiFi" : "WLAN");
 }
 
 // Sofort-Uebernahme (vom Formular per fetch bei jeder Aenderung aufgerufen)
@@ -2123,22 +2157,6 @@ String cdcNotifyEndpointText() {
   }
   return String("nicht gefunden");
 }
-// ---- USB-Serial: Serial-State direkt ueber TinyUSB senden (ohne DTR-Pruefung des Arduino-Cores) ----
-// Gleicher Aufruf wie in USBCDC::notifyState() (cores/esp32/USBCDC.cpp), nur ohne die Pruefung
-// tud_cdc_n_connected(). Ohne CFG_TUD_CDC_NOTIFY wird nichts davon uebersetzt.
-bool sendNotifyDirect(bool dcd, bool dsr, bool brk) {
-#if defined(CFG_TUD_CDC_NOTIFY) && CFG_TUD_CDC_NOTIFY
-  cdc_notify_uart_state_t st;
-  st.value = 0;
-  st.dcd = dcd;
-  st.dsr = dsr;
-  st.brk = brk;
-  return tud_cdc_n_notify_uart_state(0, &st);
-#else
-  (void)dcd; (void)dsr; (void)brk;
-  return false;
-#endif
-}
 // ---- USB-Serial: gewuenschte Pegel berechnen und bei Aenderung an den PC melden ----
 void updateSerialLines(bool dot, bool dash, bool key, bool ptt) {
   {
@@ -2147,7 +2165,6 @@ void updateSerialLines(bool dot, bool dash, bool key, bool ptt) {
     if (open && !serPortOpen) serResync = true;
     serPortOpen = open;
   }
-  if (!NOTIFY_ANY) return;
   bool want[4] = {false, false, false, false};  // Index = Belegung (0 wird ignoriert)
   if (usbSerialEnabled) {
     want[serMapDot] |= dot;
@@ -2164,13 +2181,9 @@ void updateSerialLines(bool dot, bool dash, bool key, bool ptt) {
   int64_t nowUs = esp_timer_get_time();
   if (nowUs - lastFailUs < 50000) return;
   serResync = false;
-  bool sentOk = false;
-  bool direct = false;
-  CdcOpt::ignoreDtr(USBSerial, serIgnoreDtr);   // Core mit Patch: Option "DTR ignorieren" direkt im Core
-  if (NOTIFY_DIRECT && !CdcOpt::available && serIgnoreDtr && !serPortOpen) { sentOk = sendNotifyDirect(dcd, dsr, brk); direct = true; }
-  else if (CdcNotify::available) sentOk = CdcNotify::send(USBSerial, dcd, dsr, brk);
+  USBSerial.notifyStateIgnoreDtr(serIgnoreDtr);   // Option "DTR ignorieren": Meldungen auch ohne gesetztes DTR
+  bool sentOk = USBSerial.notifyState(dcd, dsr, brk);
   if (sentOk) {
-    if (direct) serNotifyDirect = serNotifyDirect + 1;
     serSentDcd = dcd; serSentDsr = dsr; serSentBrk = brk;
     serNotifyOk = serNotifyOk + 1;
   } else {
@@ -2363,7 +2376,7 @@ void KeyerTask(void* pvParameters) {
     }
 
     // Vorlauf nur, wenn irgendeine PTT-Methode (Pin oder serielle Befehle) aktiv ist
-    bool pttCfg = usbSerialEnabled && ((serMapPtt != 0 && NOTIFY_ANY) || serCmdActive);
+    bool pttCfg = usbSerialEnabled && ((serMapPtt != 0) || serCmdActive);
     int lead = pttCfg ? constrain(keyLeadMs, 0, 1000) : 0;
     if (busy || dot || dash) { lastAct = now; ptt = true; }
     else if (ptt && (now - lastAct) > ((int64_t)serPttHangMs + lead) * 1000LL) ptt = false;
@@ -2520,7 +2533,7 @@ DBG("USB aktiv: Tastatur=%d MIDI=%d Audio=%d (Einstellung: %d/%d/%d)\n", usbKeyb
 #else
 DBG("USB aktiv: Tastatur=%d MIDI=%d Audio=0 (Einstellung: %d/%d/%d)\n", usbKeyboard != NULL, usbMidi != NULL, usbKeyboardEnabled, usbMidiEnabled, usbAudioEnabled);
 #endif
-CdcOpt::ignoreDtr(USBSerial, serIgnoreDtr);
+USBSerial.notifyStateIgnoreDtr(serIgnoreDtr);
 USB.begin();
 gpio_hold_dis((gpio_num_t)pin_paddle_links);
 gpio_hold_dis((gpio_num_t)pin_paddle_rechts);
@@ -2606,7 +2619,15 @@ for (int attempt = 0; attempt < 3 && WiFi.status() != WL_CONNECTED; attempt++) {
     WiFi.mode(WIFI_STA);
     delay(100);
   }
-  WiFi.begin(ssidHome.c_str(), passHome.c_str());
+  uint8_t fixB[6];
+  if (bssidLock && parseBssid(bssidFix, fixB)) {
+    DBG("WLAN: nur mit festgelegtem Access Point %s\n", bssidFix.c_str());
+    WiFi.begin(ssidHome.c_str(), passHome.c_str(), 0, fixB);
+  } else {
+    WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);          // alle Kanaele durchsuchen und den staerksten Access Point waehlen (Standard waere: erster gefundener)
+    WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
+    WiFi.begin(ssidHome.c_str(), passHome.c_str());
+  }
   int retries = 0;
   while (WiFi.status() != WL_CONNECTED && retries < 20) {
     delay(500);
@@ -2619,11 +2640,13 @@ if (WiFi.status() != WL_CONNECTED) {   // Hotspot nur, wenn keine Verbindung zum
 WiFi.mode(WIFI_AP);
 WiFi.softAP("Morse-S3-Config", "12345678");
 }
+applyWifiTxPower();   // erst jetzt, wenn das Funkmodul laeuft (Heimnetz verbunden oder Hotspot aktiv)
 if (WiFi.status() == WL_CONNECTED) WiFi.setSleep(false);   // kein WLAN-Modem-Sleep: stabilere/schnellere Seitenauslieferung im Heimnetz
 if (WiFi.status() == WL_CONNECTED) DBG("Heimnetz-IP: %s  (http://morse-s3.local)\n", WiFi.localIP().toString().c_str());
 if (MDNS.begin("morse-s3")) MDNS.addService("http", "tcp", 80);
 server.on("/", handleRoot);
 server.on("/rescan", handleRescan);
+server.on("/rssi", []() { server.send(200, "text/plain", wifiSignalText()); });
 server.on("/ping", []() { server.send(200, "text/plain", "ok"); });   // kleine Antwort fuer die Neustart-Seite (statt die ganze Konfigseite abzufragen)
 server.on("/save_all", handleSaveAll);
 server.on("/apply", HTTP_POST, handleApply);

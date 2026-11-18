@@ -17,6 +17,11 @@ As a first step it's a good idea to connect the adapter to your home network. Th
 
 Afterwards the adapter can also be reached in your home network via http://morse-s3.local or via the IP address assigned by your router. If the home network cannot be reached, the adapter opens its own hotspot again.
 
+**Signal strength, access point and transmit power:** In the "WLAN connection" box the status line shows the current signal strength (RSSI in dBm, updated every 5 seconds), the channel and the access point (BSSID) the adapter is connected to. As a rule of thumb: better than -70 dBm is fine, around -80 dBm is weak and leads to slow or incomplete pages and dropped connections. If the signal is weak, move the adapter (antenna side free, away from the PC and USB 3 ports, ideally in the same room as a router).
+
+* **Several routers (mesh, e.g. FRITZ!Boxes):** All boxes share one network name, so an adapter may stay connected to a distant box. At start the adapter therefore picks the access point with the **strongest signal**. In the box you also find a drop-down list **"Access Point (BSSID)"** with all access points of your network found in the last scan (BSSID, signal, channel; the connected one is marked). Select one and tick **"Use this BSSID only"** to make the adapter connect to that one only. The change is applied with the restart. If the selected box is switched off, the adapter cannot connect and opens its own hotspot, so you can untick the box again. The list is filled by the scan at start or by "Rescan WLAN". The BSSID is the WLAN address of the box; you can look it up in your router's web page (FRITZ!Box: Home Network > Network > Network Connections, details of the box).
+* **WiFi transmit power:** At the end of the box. Default is 19.5 dBm (the standard of the Espressif core), the maximum is 20 dBm. The change takes effect immediately and is stored with "Save settings". A lower value can help if the adapter is very close to the router or its power supply is weak.
+
 ## Not all USB functions at the same time
 The USB interface of the ESP32-S3 has only a **limited number of endpoints** (4 usable "IN" endpoints). Every USB function needs one of them:
 
@@ -72,7 +77,7 @@ The adapter then sends real MIDI notes (in addition to the USB keyboard commands
 
 This part of the page allows a morse paddle to be connected directly to a software TRX like SDR-Console (Simon Brown). The adapter contains its own keyer that creates a morse tone, sends it to the PC as a microphone signal and switches PTT (transmit) at the right moment.
 
-The page shows a status block at the top of this section (does the core support the status lines, is the COM port opened on the PC, DTR/RTS state, number of sent messages ...). It helps if something does not work.
+The page shows a status block at the top of this section (are the status lines being sent, is the COM port opened on the PC, DTR/RTS state, number of sent messages ...). It helps if something does not work.
 
 ### Keyer
 The keyer turns the paddle contacts into correct morse characters. It is used for the USB microphone tone, the piezo sidetone and the "Key" status line.
