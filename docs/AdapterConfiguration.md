@@ -73,7 +73,7 @@ The adapter then sends real MIDI notes (in addition to the USB keyboard commands
 **Attention:** If USB keyboard and USB MIDI are both active, the USB drivers on the PC may hang after the adapter has gone to sleep automatically (only a PC restart helps then). In this case set the sleep timeout to 0.
 
 ## USB-Serial and USB-Audio
-**Note: the USB-Audio interface and the serial status pins require the ESP32 Arduino core 3.3.13 (Espressif) or newer. No library patch is needed with that core.**
+**Note: the USB-Audio interface and the serial status pins require the ESP32 Arduino core 3.3.13 (Espressif) or a later 3.3.x release (x >= 13). Core 4.x is not supported by this sketch. No library patch is needed with that core.**
 
 This part of the page allows a morse paddle to be connected directly to a software TRX like SDR-Console (Simon Brown). The adapter contains its own keyer that creates a morse tone, sends it to the PC as a microphone signal and switches PTT (transmit) at the right moment.
 
@@ -121,7 +121,7 @@ The adapter can also set the modem status lines of the virtual COM port. Your PC
 
 In your PC software the matching input (DSR or DCD) has to be selected. CTS is not possible over USB. Not assigned lines do not use anything.
 
-Please take into account, the serial pins (DSR/DCD) require ESP32 core 3.3.13 or later (the USB-Audio interface as well). The status lines need one additional USB endpoint, which is only created if at least one status pin is assigned. See "Not all USB functions at the same time" above.
+Please take into account, the serial pins (DSR/DCD) require ESP32 core 3.3.13 or a later 3.3.x release (the USB-Audio interface as well; core 4.x is not supported). The status lines need one additional USB endpoint, which is only created if at least one status pin is assigned. See "Not all USB functions at the same time" above.
 
 **Ignore DTR (important for status pins):** Without this option the status pins are only available while the PC application has the COM port open with DTR set. With the option they are always available. Programs that do not set DTR (such as SDR-Console) need it.
 

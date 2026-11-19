@@ -17,7 +17,7 @@ More details can be found in the header of the ino-file and in the docs folder.
 Take care to order the correct ESP32-S3 Mini board (e.g. Heemol ESP32-S3 Mini, 18 pins).
 
 ## Requirements
-The sketch needs the **ESP32 Arduino core 3.3.13** from Espressif (released on 17 November 2026) or newer. Install it via the Arduino Boards Manager ("esp32" by Espressif Systems). The USB-Audio interface (morse tone as microphone) and the USB-Serial status pins (DCD/DSR for PTT) depend on it; the sketch uses only the official core interfaces, no patched libraries are required. With an older core the sketch stops with an error message when compiling.
+The sketch needs the **ESP32 Arduino core 3.3.13** from Espressif (released on 17 November 2026), or a later 3.3.x release (3.3.x with x >= 13). **Core 4.x is not supported by this sketch.** Install the core via the Arduino Boards Manager ("esp32" by Espressif Systems) and select version 3.3.13 explicitly; do not update to 4.x. The USB-Audio interface (morse tone as microphone) and the USB-Serial status pins (DCD/DSR for PTT) depend on this core; the sketch uses only the official core interfaces, no patched libraries are required. With an older core or with core 4.x the sketch stops with an error message when compiling.
 
 Details (board settings, libraries) can be found in the header of the ino-file.
 

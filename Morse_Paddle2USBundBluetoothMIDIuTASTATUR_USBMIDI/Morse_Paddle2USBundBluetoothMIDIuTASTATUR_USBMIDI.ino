@@ -75,8 +75,11 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *  BOARD-PAKET: "esp32" by Espressif Systems  (Boardverwalter, Min. Arduino-ESP32 3.x /
 *    ESP-IDF 5.1 fuer BLE-Adresse im MIDI-Modus).
 *    USB-Audio-Mikrofon UND Statusleitungen (DCD/DSR/Break, "PTT via Pin") benoetigen den
-*    Espressif-Core  3.3.13  oder neuer (Release vom 17.11.2026). Mit aelteren Staenden
-*    bricht die Uebersetzung mit einer Fehlermeldung ab. Der Sketch nutzt dafuer nur die
+*    Espressif-Core  3.3.13  (Release vom 17.11.2026) bzw. eine spaetere 3.3.x-Version (x >= 13).
+*    Core 4.x wird vom Sketch NICHT unterstuetzt (BLE-Bibliothek und mbedTLS wurden in 4.0 geaendert).
+*    Mit aelteren Staenden und mit Core 4.x bricht die Uebersetzung mit einer Fehlermeldung ab.
+*    Im Boardverwalter deshalb Version 3.3.13 waehlen und nicht auf 4.x aktualisieren.
+*    Der Sketch nutzt fuer USB-Audio und Statusleitungen nur die
 *    offiziellen Schnittstellen des Cores:
 *     - USB-Audio-Mikrofon:  Klasse USBAudioCard samt korrigiertem UAC1-Descriptor (PR #13095).
 *     - Statusleitungen:  USBCDC::notifyState() mit echtem Notification-Endpoint
@@ -137,7 +140,7 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 *  - Meldung "unlinkat ... .map: Der Prozess kann nicht auf die Datei zugreifen"
 *    beim Kompilieren ist ein kurzer Dateizugriffskonflikt (z.B. Virenscanner):
 *    einfach noch einmal kompilieren.
-*  - Audio-Mikrofon doppelt/fehlt in Windows: Core 3.3.13 oder neuer verwenden (Abschnitt 3),
+*  - Audio-Mikrofon doppelt/fehlt in Windows: Core 3.3.13 (3.3.x) verwenden (Abschnitt 3),
 *    Build-Cache loeschen, ggf. altes Geraet im Geraete-Manager entfernen.
 *  - Diagnose: Im Webinterface zeigt der Bereich "USB-Serial & USB-Audio" den
 *    Zustand des Cores (Statusleitungen moeglich?), ob der COM-Port am PC geoeffnet ist,
@@ -274,7 +277,7 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 * ------------------------------------------------------------------------------
 *  8. BEKANNTE EINSCHRAENKUNGEN
 * ------------------------------------------------------------------------------
-*   - USB-Audio und "PTT via Pin" benoetigen den Espressif-Core 3.3.13 oder neuer (Abschnitt 3).
+*   - USB-Audio und "PTT via Pin" benoetigen den Espressif-Core 3.3.13 oder eine spaetere 3.3.x-Version; Core 4.x wird nicht unterstuetzt (Abschnitt 3).
 *   - Die Statusleitungen belegen einen zusaetzlichen IN-Endpoint. Der ESP32-S3 hat nur wenige
 *     nutzbare IN-Endpoints (CDC-Daten, USB-Tastatur, USB-MIDI, USB-Audio): Sind alle Funktionen
 *     gleichzeitig aktiv, ist die Belegung knapp; dieser Grenzfall ist nicht abschliessend getestet.
@@ -288,7 +291,10 @@ Diese Software wurde mit Unterstuetzung von Claude (Anthropic) angepasst und erw
 #include "USBMIDI.h"
 #if defined(ESP_ARDUINO_VERSION) && defined(ESP_ARDUINO_VERSION_VAL)
   #if ESP_ARDUINO_VERSION < ESP_ARDUINO_VERSION_VAL(3, 3, 13)
-    #error "Dieser Sketch braucht den Espressif-Core 3.3.13 oder neuer (USB-Audio und Statusleitungen). Bitte im Boardverwalter aktualisieren. / This sketch needs the Espressif core 3.3.13 or newer."
+    #error "Dieser Sketch braucht den Espressif-Core 3.3.13 (USB-Audio und Statusleitungen), bitte im Boardverwalter Version 3.3.13 installieren. / This sketch needs the Espressif core 3.3.13."
+  #endif
+  #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(4, 0, 0)
+    #error "Core 4.x wird von diesem Sketch nicht unterstuetzt (BLE-Bibliothek und mbedTLS geaendert), bitte im Boardverwalter Version 3.3.13 waehlen. / Core 4.x is not supported by this sketch, please select version 3.3.13 in the Boards Manager."
   #endif
 #endif
 #include <BLEDevice.h>
@@ -388,7 +394,7 @@ USBMIDI* usbMidi = NULL;               // wird nur bei Aktivierung angelegt (sie
 // ---- USB-Serial-Modus: Statusleitungen DCD / DSR / Break (Geraet -> PC) ----
 // Der virtuelle COM-Port kann dem PC ueber eine "Serial State"-Meldung mitteilen, ob DCD, DSR
 // bzw. Break aktiv sind (Software wie "Remote CW Keyer" oder SDR Console liest diese Leitungen).
-// Dafuer nutzt der Sketch die offiziellen Schnittstellen des Espressif-Cores (ab 3.3.13):
+// Dafuer nutzt der Sketch die offiziellen Schnittstellen des Espressif-Cores (ab 3.3.13, Reihe 3.3.x):
 //  - USBSerial.notifyState(dcd, dsr, brk)           (PR #13037)
 //  - USBSerial.notifyStateIgnoreDtr(bool)           (PR #13113): Meldungen auch ohne gesetztes DTR
 //  - tud_cdc_0_use_notify(): wird vom Core beim Aufbau des USB-Descriptors gefragt; true = echter
